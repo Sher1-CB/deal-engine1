@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The CB Deal Generator v8.77</title>
+    <style>
+        :root {
+            --primary: #1a73e8; 
+            --primary-hover: #1557b0;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #202124;
+            --text-muted: #5f6368;
+            --border: #dadce0;
+            --success: #0f9d58;
+        }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; }
+        
+        .header-container { max-width: 1200px; margin: 0 auto 15px auto; display: flex; align-items: center; gap: 15px; }
+        .header-icon { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+        .header-title h1 { margin: 0; font-size: 18px; color: var(--text-main); font-weight: 600;}
+        .header-title p { margin: 0; font-size: 12px; color: var(--text-muted); }
+        .version-tag { font-size: 12px; background: #fff; color: var(--primary); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--primary); font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
+
+        .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; max-width: 1200px; margin: auto; }
+        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 15px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; }
+        .card-header h3 { margin: 0; font-size: 13px; color: var(--text-main); display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        label { font-weight: 600; display: block; margin-top: 10px; margin-bottom: 5px; font-size: 12px; color: var(--text-main); }
+        textarea, input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--text-main); font-family: inherit; box-sizing: border-box; font-size: 13px; transition: border 0.2s; }
+        textarea:focus, input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+        textarea { height: 100px; resize: vertical; }
+        .small-textarea { height: 60px; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; font-weight: 600; font-size: 13px; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        button:hover { background: var(--primary-hover); box-shadow: 0 1px 3px rgba(0,0,0,0.15);}
+        button:disabled { background: #ccc; cursor: not-allowed; box-shadow: none;}
+        
+        .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px;}
+        .btn-outline:hover { background: #f1f3f4; }
+
+        .row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 180px; }
+        
+        .api-box { background: #fff8e1; border: 1px solid #fbbc04; border-radius: 8px; padding: 10px 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;}
+        .api-box input { margin-top: 0; flex: 1; padding: 6px 10px;}
+        .api-link { font-size: 11px; color: #b06000; text-decoration: none; font-weight: 600; white-space: nowrap;}
+        .api-link:hover { text-decoration: underline; }
+
+        .output-container { max-width: 1200px; margin: 0 auto; } 
+        .output-layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-top: 15px; } 
+        @media (max-width: 900px) { .output-layout { grid-template-columns: 1fr; } }
+        .output-col { display: flex; flex-direction: column; gap: 15px; }
+
+        .output-box { background: #ffffff; border: 1px solid var(--border); padding: 12px 15px; border-radius: 8px; font-family: inherit; color: var(--text-main); font-size: 15px; line-height: 1.5; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.03);}
+        .output-content { white-space: pre-wrap; word-wrap: break-word; }
+        .box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #f1f3f4; padding-bottom: 6px;}
+        .box-header h4 { margin: 0; font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;}
+        
+        .copy-btn { background: #f8f9fa; color: var(--text-muted); border: 1px solid var(--border); padding: 4px 10px; font-size: 11px; border-radius: 4px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px; margin: 0;}
+        .copy-btn:hover { background: #e8eaed; color: var(--primary); border-color: var(--primary); }
+        
+        .raw-output-btn { background: #f8f9fa; color: var(--text-main); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .raw-output-btn:hover { background: #e8eaed; }
+
+        .history-list { max-height: 400px; overflow-y: auto; padding-right: 5px;}
+        .history-card { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+        .history-card:hover { border-color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+        .history-time { color: var(--text-muted); font-size: 10px; display: block; margin-bottom: 2px; text-transform: uppercase;}
+        .history-title { font-size: 12px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    </style>
+</head>
+<body>
+
+<div class="header-container">
+    <div class="header-icon">📚</div>
+    <div class="header-title">
+        <h1>The CB Deal Generator</h1>
+        <p>Precision Social Media Deal Generation Workspace</p>
+    </div>
+</div>
+
+<div class="main-grid">
+    <div class="left-col">
+        
+        <div class="api-box">
+            <a href="https://aistudio.google.com/u/1/api-keys" target="_blank" class="api-link">🔗 Get your Gemini API Key through this LINK</a>
+            <input type="password" id="apiKey" placeholder="Paste your AIzaSy... key here">
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 style="color: var(--primary);">🔵 RAW INPUT WORKSPACE</h3>
+                <button class="btn-outline" onclick="clearWorkspace()">🗑️ Clear Memory</button>
+            </div>
+            
+            <label>Raw Deal Context Text</label>
+            <textarea id="rawText" placeholder="Paste or type raw deals information verbatim here..."></textarea>
+            
+            <label>✍️ Custom Injection Line (Optional)</label>
+            <textarea id="customLine" class="small-textarea" placeholder="Type a personal review, joke, or custom instruction here. The AI will scrub it for banned words and rephrase it 4 unique ways. Do NOT change the meaning..."></textarea>
+            
+            <div class="row" style="margin-top: 15px;">
+                <div class="col">
+                    <label>🚨 Deal Type</label>
+                    <select id="dealType">
+                        <option value="regular" selected>Regular Deal</option>
+                        <option value="run">Run Deal</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label>📅 Day of Week Reference</label>
+                    <select id="currentDay">
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                        <option value="Sunday">Sunday</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label>✨ Primary AI Model</label>
+                    <select id="aiModel">
+                        <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Fastest)</option>
+                        <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
+                        <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row" style="margin-top: 10px;">
+                <div class="col">
+                    <label>🔢 Cycle Deal Sequence #</label>
+                    <select id="dealNumber" onchange="updateButtonText()">
+                        <option value="1">Deal 1 (ODD)</option>
+                        <option value="2">Deal 2 (EVEN)</option>
+                        <option value="3">Deal 3 (ODD)</option>
+                        <option value="4">Deal 4 (EVEN)</option>
+                        <option value="5">Deal 5 (ODD)</option>
+                        <option value="6">Deal 6 (EVEN)</option>
+                        <option value="7">Deal 7 (ODD)</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label>🗣️ Persona Pronoun Style</label>
+                    <select id="pronounStyle">
+                        <option value="subject">1st Person (I / My / We / Our)</option>
+                        <option value="possessive">3rd Person (This / That / It / These)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
+                <span style="font-size: 12px; color: var(--text-muted);" id="nextTargetText">Next target: <strong>Deal 1</strong>. Output saves automatically to ledger.</span>
+                <button id="apiButton" onclick="processDeal()">✨ Generate Deal 1</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="right-col">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; margin-top: -30px;">
+            <span class="version-tag">v8.77</span>
+        </div>
+        <div class="card">
+            <div class="card-header" id="sessionBaseHeaderContainer">
+                <h3 id="sessionBaseHeader">📚 SESSION BASE (0 / 14)</h3>
+            </div>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: -5px; margin-bottom: 10px;">History saves on device automatically</p>
+            <div id="historyLog" class="history-list">
+                <div style="text-align: center; padding: 30px 20px; color: var(--text-muted);" id="emptyHistory">
+                    <div style="font-size: 24px; margin-bottom: 8px; opacity: 0.5;">📄</div>
+                    <strong>No deals tracked yet</strong><br>
+                    <span style="font-size: 11px;">Add or generate deals to populate active sequence saves.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="output-container" id="outputSection" style="display:none;">
+    <div class="card">
+        <div class="card-header">
+            <h3 style="color: var(--success);">✅ GENERATED SOCIAL POST VARIATIONS</h3>
+            <button class="raw-output-btn" onclick="copyRawOutput(this)">📄 Copy Raw Output</button>
+        </div>
+        
+        <div class="output-layout">
+            <div class="output-col">
+                <div class="output-box" style="border-left: 4px solid var(--primary);">
+                    <div class="box-header">
+                        <h4>🎯 PHASE 0: TARGET LOCK</h4>
+                    </div>
+                    <div id="out-phase0" class="output-content" style="font-family: monospace; font-size: 12px;"></div>
+                </div>
+
+                <div class="output-box">
+                    <div class="box-header">
+                        <h4>📝 POST VARIATION 1</h4>
+                        <button class="copy-btn" onclick="copyToClipboard('out-post1', this)">📄 Copy</button>
+                    </div>
+                    <div id="out-post1" class="output-content"></div>
+                </div>
+
+                <div class="output-box">
+                    <div class="box-header">
+                        <h4>📝 POST VARIATION 2</h4>
+                        <button class="copy-btn" onclick="copyToClipboard('out-post2', this)">📄 Copy</button>
+                    </div>
+                    <div id="out-post2" class="output-content"></div>
+                </div>
+
+                <div class="output-box">
+                    <div class="box-header">
+                        <h4>📝 POST VARIATION 3</h4>
+                        <button class="copy-btn" onclick="copyToClipboard('out-post3', this)">📄 Copy</button>
+                    </div>
+                    <div id="out-post3" class="output-content"></div>
+                </div>
+            </div>
+
+            <div class="output-col">
+                <div class="output-box">
+                    <div class="box-header">
+                        <h4>💬 COMMENT 1</h4>
+                        <button class="copy-btn" onclick="copyToClipboard('out-com1', this)">📄 Copy</button>
+                    </div>
+                    <div id="out-com1" class="output-content"></div>
+                </div>
+
+                <div class="output-box">
+                    <div class="box-header">
+                        <h4>💬 COMMENT 2</h4>
+                        <button class="copy-btn" onclick="copyToClipboard('out-com2', this)">📄 Copy</button>
+                    </div>
+                    <div id="out-com2" class="output-content"></div>
+                </div>
+
+                <div class="output-box">
+                    <div class="box-header">
+                        <h4>💬 COMMENT 3</h4>
+                        <button class="copy-btn" onclick="copyToClipboard('out-com3', this)">📄 Copy</button>
+                    </div>
+                    <div id="out-com3" class="output-content"></div>
+                </div>
+
+                <div class="output-box" style="border-left: 4px solid #fbbc04;">
+                    <div class="box-header">
+                        <h4>🧵 DAILY THREAD COMMENT</h4>
+                        <button class="copy-btn" onclick="copyToClipboard('out-dt', this)">📄 Copy Thread</button>
+                    </div>
+                    <div id="out-dt" class="output-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let dealCount = 0;
+    let sessionHistory = []; 
+    let currentRawOutput = ""; 
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedKey = localStorage.getItem('geminiApiKey');
+        if(savedKey) document.getElementById('apiKey').value = savedKey;
+        
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        document.getElementById('currentDay').value = days[new Date().getDay()];
+    });
+
+    function updateButtonText() {
+        const num = document.getElementById('dealNumber').value;
+        document.getElementById('apiButton').innerHTML = `✨ Generate Deal ${num}`;
+        document.getElementById('nextTargetText').innerHTML = `Next target: <strong>Deal ${num}</strong>. Output saves automatically to ledger.`;
+    }
+
+    function clearWorkspace() {
+        if(!confirm("Are you sure you want to clear all history and reset to Deal 1?")) return;
+        document.getElementById('rawText').value = '';
+        document.getElementById('customLine').value = '';
+        sessionHistory = [];
+        dealCount = 0;
+        const historyLog = document.getElementById('historyLog');
+        historyLog.innerHTML = `
+            <div style="text-align: center; padding: 30px 20px; color: var(--text-muted);" id="emptyHistory">
+                <div style="font-size: 24px; margin-bottom: 8px; opacity: 0.5;">📄</div>
+                <strong>No deals tracked yet</strong><br>
+                <span style="font-size: 11px;">Add or generate deals to populate active sequence saves.</span>
+            </div>
+        `;
+        document.getElementById('sessionBaseHeader').innerText = `📚 SESSION BASE (0 / 14)`;
+        document.getElementById('dealNumber').value = 1;
+        document.getElementById('outputSection').style.display = "none";
+        updateButtonText();
+    }
+
+    const allPrefixes = ["Just", "Down to", "At", "Score it for", "Only", "Found for", "Marked at", "Sitting at", "Now", "Fell to", "Yours for", "Spotted at", "Grab it for", "Snag it for"];
+    const allCompLabels = ["Regular", "Normally", "Originally", "Previously", "Was", "List"];
+    
+    // --- 1ST PERSON DICTIONARIES (HIGH-VOLUME) ---
+    const discoveries1st = [
+        "We just spotted this crazy good find", "This plummeted and we had to show you", "Our team thinks this is an unreal discovery today",
+        "I can't believe how low this dropped", "This is an absolute steal right now", "We had to share this massive drop immediately",
+        "Look at this incredible value we just found", "This is one of the best drops we've seen all week", "Our team is obsessed with this current value",
+        "I just grabbed mine at this lower total", "We noticed this fell and it is so good", "I am obsessed with this perfect catch",
+        "My jaw dropped when I saw this one", "We couldn't keep this a secret from you", "I practically ran to share this markdown",
+        "Our group chat went crazy over this", "I snagged this immediately for my house", "We are loving this incredible markdown today",
+        "I immediately added this to my list", "We are totally blown away by this one", "I am so hyped about this current number"
+    ];
+    const pointers1st = [
+        "I put it right under here for you!", "I left the exact page right under this!", "I pinned the exact spot right under this text!",
+        "I tucked the exact spot right under here!", "We linked it just a quick scroll away!", "I placed the location just under this text!",
+        "You can grab yours right under here!", "Just scroll down a tiny bit to find it!", "Everything you need is a little further down!",
+        "I dropped the exact page right below!", "We added the info right down there for you!", "I am leaving the spot right under here!",
+        "I secured the page right under this!", "We put the exact location just a step down!", "I attached it right down there!",
+        "I made sure to pin it right under this!", "We left the exact location waiting below!", "I tucked it just a tiny scroll away!",
+        "I made sure to drop it right under here!", "We placed the exact page right down there!"
+    ];
+    const linkLeads1st = [
+        "I left the page right here:", "My direct link is here:", "I pinned the exact page here:", "See what we found right here:",
+        "I dropped it right here:", "We put it right here for you:", "I added the location here:", "We linked it exactly here:",
+        "I secured the spot right here:", "My exact find is here:", "I attached the page here:", "We pinned it right here:",
+        "Grab it here:", "See it here:", "Check the exact page here:", "You can view it here:"
+    ];
+
+    // --- 3RD PERSON DICTIONARIES (HIGH-VOLUME) ---
+    const discoveries3rd = [
+        "This is a crazy good find", "This plummeted to an amazing new low", "This is an unreal discovery today",
+        "It's hard to believe how low this dropped", "This is an absolute steal right now", "This massive drop just went live",
+        "Look at this incredible value", "This is one of the best drops of the week", "This current value is unbelievable",
+        "This just hit a much lower total", "This fell and it is so good", "This is a perfect catch for anyone looking",
+        "This markdown is absolutely wild right now", "This is a phenomenal markdown to catch", "This is an unmatched value today",
+        "This is a top-tier find right now", "This is an unbeatable catch today", "This dropped beautifully just now",
+        "This is a spectacular markdown to grab", "This is a brilliantly timed drop", "This is a brilliant catch today"
+    ];
+    const pointers3rd = [
+        "The exact page is right under here!", "You can grab yours right under here!", "The link is right under this!",
+        "It's waiting for you right down there!", "Just scroll down a tiny bit to find it!", "The right spot is waiting just a step down!",
+        "Find the exact location ready in the next section!", "Everything you need is a little further down!", "Catch it just a quick scroll away!",
+        "The exact spot is pinned right under this text!", "The location is resting just under this text!", "Look just a little further down for the page!",
+        "It is tucked right down there!", "The exact page is waiting below!", "The info is resting just a step down!",
+        "The exact location is pinned right below!", "Catch the exact page right down there!"
+    ];
+    const linkLeads3rd = [
+        "Grab it here:", "See it here:", "Find it here:", "Check the exact page here:", "The page is right here:",
+        "The direct spot is here:", "You can view it here:", "Catch it right here:", "Here is the exact location:", 
+        "The exact spot is here:", "The location is here:", "The exact page is pinned here:", "View the exact spot here:"
+    ];
+
+    const shortPointers = [
+        "Right under here!", "Tucked down there!", "Just under this!", "Waiting down there!", 
+        "Pinned down there!", "Right down there!", "Just down there!", "Tucked under this!", 
+        "Just under here!", "Waiting under this!", "Resting down there!", "Right under this!"
+    ];
+    
+    const allCuriosityHooks = [
+        "Did the warehouse mess up?!", "Someone is getting fired!", "Is this a system glitch?!", 
+        "How is this even possible?!", "Did they type this wrong?!", "This has to be a mistake!", 
+        "Are you seeing these numbers?!", "Did the algorithm break?!", "Someone made a huge error!", 
+        "Is this a system error?!", "They are practically giving it away!", "Did someone type the wrong digit?!"
+    ];
+
+    const shuffleArray = (arr) => [...arr].sort(() => 0.5 - Math.random());
+
+    function cleanText(str) {
+        if (!str) return "";
+        return str.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{238C}\u{2B06}\u{2B05}\u{2B07}\u{2B1B}\u{2B1C}\u{2B50}\u{2B55}\u{231A}\u{231B}\u{2328}\u{23F0}\u{23F3}\u{23E9}-\u{23EC}\u{25FD}\u{25FE}\u{25AA}\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{200D}\u{FE0F}\u{2640}\u{2642}\u{1F4A8}]/gu, '').trim();
+    }
+
+    function extractURL(text) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const match = text.match(urlRegex);
+        return match ? match[0] : "https://thecouponboutique.com/";
+    }
+
+    function joinWithSpaceChaos(linesArray, minBlank, maxBlank) {
+        if (!linesArray || linesArray.length === 0) return "";
+        if (linesArray.length === 1) return linesArray[0];
+        
+        let numGaps = linesArray.length - 1;
+        let maxPossible = Math.min(maxBlank, numGaps);
+        let minPossible = Math.min(minBlank, maxPossible);
+        
+        let numDoubleSpaces = Math.floor(Math.random() * (maxPossible - minPossible + 1)) + minPossible;
+        let numSingleSpaces = numGaps - numDoubleSpaces;
+        
+        let separators = [];
+        for(let i=0; i<numDoubleSpaces; i++) separators.push('\n\n');
+        for(let i=0; i<numSingleSpaces; i++) separators.push('\n');
+        
+        separators = separators.sort(() => 0.5 - Math.random());
+        
+        let result = linesArray[0];
+        for(let i=0; i<numGaps; i++) {
+            result += separators[i] + linesArray[i+1];
+        }
+        return result;
+    }
+
+    async function processDeal() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const rawText = document.getElementById('rawText').value.trim();
+        const customLine = document.getElementById('customLine').value.trim();
+        const day = document.getElementById('currentDay').value;
+        const selectedModel = document.getElementById('aiModel').value;
+        const pronounStyle = document.getElementById('pronounStyle').value;
+        const dealType = document.getElementById('dealType').value;
+        let dealNumInput = document.getElementById('dealNumber');
+        let dealNum = parseInt(dealNumInput.value);
+        const btn = document.getElementById('apiButton');
+
+        if(!apiKey || !rawText) { alert("Please provide API Key and Raw Text!"); return; }
+        localStorage.setItem('geminiApiKey', apiKey);
+
+        if (dealCount >= 14) {
+            sessionHistory = [];
+            dealCount = 0;
+            document.getElementById('historyLog').innerHTML = ''; 
+            dealNum = 1; 
+            dealNumInput.value = 1;
+        }
+
+        btn.innerHTML = "⏳ Generating...";
+        btn.disabled = true;
+        document.getElementById('outputSection').style.display = "block";
+
+        let pronounInstruction = "";
+        if (pronounStyle === "subject") {
+            pronounInstruction = "You MUST use 1st Person pronouns (e.g., 'I', 'My', 'We', 'Our', 'Us') to show personal ownership or collective experience (e.g., 'I love how this looks', 'This saves us so much time').";
+        } else {
+            pronounInstruction = "You MUST use 3rd Person, Demonstrative, or 2nd Person Possessive pronouns (e.g., 'It', 'Its', 'Them', 'Their', 'These', 'Those', 'This', 'That', 'Your'). You are STRICTLY FORBIDDEN from using 1st Person pronouns like 'I', 'My', 'We', 'Our', or 'Us'. Frame the sentence objectively but directed at the reader (e.g., 'This looks perfect in your kitchen', 'These are great for saving your time').";
+        }
+
+        let customLineInstruction = customLine 
+            ? `"custom_line_rephrases": (Array of 4 sentences. The user provided this custom line: "${customLine}". You MUST fix leetspeak, scrub banned words, and rephrase it 4 unique ways. Do NOT change the meaning.),` 
+            : `"custom_line_rephrases": (Array of 4 sentences. Write ["DEAD","DEAD","DEAD","DEAD"]),`;
+
+        let prompt = "";
+
+        if (dealType === 'regular') {
+            // V8.77 REGULAR DEAL PROMPT
+            prompt = `Analyze this deal: "${rawText}"
+Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings.
+"retailer_name": (String. Extract retailer, e.g. "Amazon" or "Walmart". Fix leetspeak like W@lm@rt),
+"cleaned_title": (String. Copy product name exactly. Remove emojis. ABSOLUTE VERBATIM LOCK: Do NOT delete 'QTY' or instructional verbs like 'ADD' or 'BUY'.),
+"sale_price": (String. Scan the ENTIRE raw text to extract the sale price, e.g. "$19.99". MISSING PRICE LOCK: If there is NO price in the raw text, you MUST write "???". Do NOT hallucinate a price.),
+"reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". Do NOT mash the numbers together like "10896". If none, write "NONE"),
+"praises": (Array of 3 short hype questions ending in '?'. PRONOUN ENFORCEMENT: ${pronounInstruction} AVID SHOPPER PERSONA: Ask positive, rhetorical questions (e.g., 'Can you believe how good this looks?'). You are STRICTLY FORBIDDEN from asking functional or troubleshooting questions that introduce doubt.),
+"inferences": (Array of 3 short lifestyle statements. TESTIMONIAL HIJACK: If the raw text contains a personal review, use it as the base and rephrase it 3 times. PRONOUN ENFORCEMENT: ${pronounInstruction} You MUST obey the pronoun rule above all else. Make it highly specific to the product's use-case. DATA BLEED BAN: You are STRICTLY FORBIDDEN from pulling specific colors, sizes, limits, accessories, or prices into these lifestyle statements. Keep them focused purely on the physical item and how it is used.),
+"disclaimers": (Array of 3 casual warnings. SCARCITY BAN: You are STRICTLY FORBIDDEN from mentioning inventory, stock, shelves, items selling out, 'quantity on hand', or 'count'. Focus ONLY on the dollar amount fluctuating. B2 LEAK BAN: Do NOT put limits, minimums, or quantity rules here.),
+"b2_verification": (String. Extract ONLY these categories from the extra text: 1) Active limits, 2) Required cart quantities, 3) Specific variants, 4) Size ranges, 5) Generic variety phrases, and 6) Explicit per-item math. TRIGGER CATCH-ALL: If the text says 'works on', 'cheaper', or 'cheapest', you MUST extract that variant! S&S COLLISION BAN: You are STRICTLY FORBIDDEN from extracting 'S&S' or 'Subscribe' here, even if the word 'cheaper' is next to it. S&S belongs exclusively to B8. SHIPPING BAN: You are STRICTLY FORBIDDEN from extracting shipping minimums. TITLE BLINDNESS: Ignore adjectives if they are ONLY in the title. TITLE EXCEPTION: Extract sizes and varieties from the extra text even if they share words with the title. If no facts exist outside the title, write "NONE"),
+"b2_strategies": (Array of 4 sentences. DEPENDENCY LOCK: If b2_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Translate the facts casually.
+- BLUEPRINT METHOD: You MUST include EVERY extracted fact in EVERY SINGLE sentence. Do not split them up!
+- RULE 1 (LIMITS): Frame limits casually: "Heads up, there is a limit of 5!" (Do NOT say 'add' or 'grab' for limits).
+- RULE 2 (QUANTITIES): Frame required minimums actively: "You need to add 4 of these!"
+- RULE 3 (VARIANTS & RANGES): IF SPECIFIC VARIANTS: You MUST print the literal variants. IF SPECIFIC RANGE: You MUST print the literal range. IF GENERIC VARIETY: "Make sure to pick your favorite color!".
+- ANTI-PARROT VERB ROTATION: For Quantities and Variants, you MUST randomly rotate between the verbs 'Choose', 'Select', 'Grab', and 'Pick'.
+- MATH MANDATE: If you extracted per-item math (e.g., '$16.88 per jug'), you MUST print that exact math in EVERY sentence. If no math was extracted, you are STRICTLY FORBIDDEN from calculating it yourself.
+- ACRONYM SCRUB: You MUST translate 'QTY' into plain English (e.g., 'items', 'of these'). You are STRICTLY FORBIDDEN from printing the literal letters 'QTY'.
+- TITLE ECHO BAN: You are STRICTLY FORBIDDEN from repeating the product title here. Use generic nouns (e.g., 'these', 'items').
+Do NOT use robotic filler phrases like 'It is fun to select'.),
+"b5_verification": (String. Extract any retailer-specific shipping/pickup requirements. If none, write "NONE"),
+"b5_perks": (Array of 4 sentences. DEPENDENCY LOCK: If b5_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Rephrase the shipping perk casually. 
+- RULE 1 (MULTI-PATH): If there are multiple ways to get the perk (e.g., 'Walmart+ OR $35 order'), you MUST state both paths (e.g., 'Delivery is covered if you have a membership, otherwise just hit the $35 mark!').
+- EXACT VALUE: Include the exact dollar amount if provided.
+Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
+"b6_verification": (String. Does the text require a promo code, digital coupon, or clippable? If yes, note it. If no, write "NONE"),
+"b6_savings": (Array of 4 sentences. DEPENDENCY LOCK: If b6_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, dynamically write 4 casual reminders to check the box or enter the code.),
+"b7_occasions": (Array of 4 sentences. HOLIDAY LOCK: If the raw text EXPLICITLY says 'Arrives before [Holiday]', write 4 unique urgency sentences. If no explicit arrival time, write ["DEAD","DEAD","DEAD","DEAD"]),
+"b8_verification": (String. Extract ANY leftover facts explicitly stated in the extra text, including product specs, built-in features, capabilities, AND included accessories/bonuses. S&S OVERRIDE MANDATE: You MUST extract 'S&S', 'Subscribe', or 'Auto-delivery' even if it shares a line with a B2 quantity or the word 'cheaper'. Also extract 'No code needed', or 'Select accounts'. B2 COLLISION BAN: You are STRICTLY FORBIDDEN from extracting colors, size ranges, limits, or required cart quantities here. Colors and sizes belong exclusively to B2. If the only leftover facts are colors or sizes, write "NONE"),
+"b8_overflow": (Array of 4 sentences. DEPENDENCY LOCK: If b8_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Translate using these blueprints:
+- IF S&S / AUTO-DELIVERY: You MUST randomly rotate between these phrases: "Set up routine delivery to drop the total even more!", "Use the auto-delivery option to make it even cheaper!", "Opt for scheduled arrivals for an extra discount!" (Do NOT print 'S&S').
+- IF NO CODE NEEDED: "The total drops automatically at the end!" 
+- IF SELECT ACCOUNTS: "Heads up, this might only work for certain accounts!"
+- IF FEATURE OR ACCESSORY: Frame casually. SEMANTIC ENTITY LOCK: You MUST name the specific feature/accessory, but adjust the grammar so it sounds natural (e.g., If the text says 'Gloves included', say 'It even comes with gloves!', do NOT say 'It features Gloves included!'). You are STRICTLY FORBIDDEN from abstracting it into generic words like 'specs'.
+- ANTI-PARROT LOCK: You MUST use a VARIETY of phrasing across the 4 sentences. Do NOT repeat the exact same sentence structure.
+- COMPOUNDING: If you extracted multiple facts, combine them.
+Do NOT use thesaurus words like 'reduction'.),
+"b9_verification": (String. Extract a SECOND distinct leftover fact if one exists. If there is only ONE leftover fact total, write "NONE".),
+"b9_overflow": (Array of 4 sentences. DEPENDENCY LOCK: If b9_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, rephrase the SECOND fact 4 times.),
+${customLineInstruction}
+"dt_signoff": (String. 1 short lifestyle sentence. PRONOUN ENFORCEMENT: ${pronounInstruction} You MUST obey the pronoun rule above all else.),
+"emoji_pool": (Array of 30 UNIQUE emojis that logically complement the product's category. STRICT BAN: Do NOT use generic shapes, and NEVER use negative/warning emojis like 🚫, ❌, 🛑, or ⚠️.)
+GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Comment, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click here, Tap here, Check the bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Hack, Miracle, Cure, Guaranteed, Proven, 100% effective. CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
+        } else {
+            // V8.77 RUN DEAL PROMPT
+            prompt = `Analyze this deal: "${rawText}"
+Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings.
+"retailer_name": (String. Extract retailer, e.g. "Amazon" or "Walmart". Fix leetspeak like W@lm@rt),
+"cleaned_title": (String. Copy product name exactly. Remove emojis. ABSOLUTE VERBATIM LOCK: Do NOT delete 'QTY' or instructional verbs like 'ADD' or 'BUY'.),
+"scrubbed_keyword": (String. Extract a generic noun for the product. STRICT LIMIT: Max 1 to 2 words. CONTEXTUAL MULTIPLIER MANDATE: If the deal includes a specific quantity multiplier like 2 QTY or 4-Pack, you MUST include it here, e.g., '2-Pack Microwave'.),
+"sale_price": (String. Scan the ENTIRE raw text to extract the sale price. MISSING PRICE LOCK: If there is NO price in the raw text, write "???". Do NOT hallucinate a price.),
+"reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". Do NOT mash the numbers together like "10896". If none, write "NONE"),
+"curiosity_hooks": (Array of 3 full, unique sentences acting out a Suspicious Glitch Hunter persona. STRICT LIMIT: Max 25 characters. MUST end with "?!" or "!". EMOTIONAL BOUNDARY LAW: You are STRICTLY FORBIDDEN from mentioning the physical product or its use-case here.),
+"inferences": (Array of 3 short lifestyle statements. THE ACTION-VALUE MANDATE: STRICT LENGTH LIMIT: Max 6 words. PRODUCT-SPECIFIC VERB LAW: You MUST start the sentence with a physical action verb specific to how you use the item (e.g., 'Heat up food'). VALUE WHITELIST: You MUST end the sentence with one of these exact phrases: 'for way less', 'for a fraction of the cost', 'without breaking the bank', 'at a massive discount', or 'on a serious budget'. ANTI-PARROT LOCK: You MUST select 3 DISTINCT phrases from the whitelist. You are STRICTLY FORBIDDEN from using the same phrase twice. DATA BLEED BAN: You are STRICTLY FORBIDDEN from pulling specific colors, sizes, limits, accessories, or prices into these lifestyle statements.),
+"praises": (Array of 3 short hype questions ending in '?'. PRONOUN ENFORCEMENT: ${pronounInstruction} Ask positive, rhetorical questions.),
+"disclaimers": (Array of 3 casual warnings. SAFE SCARCITY MANDATE: You are STRICTLY FORBIDDEN from mentioning inventory, stock, shelves, or items selling out. Focus ONLY on the system or amount fluctuating. B2 LEAK BAN: Do NOT put limits, minimums, or quantity rules here.),
+"b2_verification": (String. Extract ONLY these categories from the extra text: 1) Active limits, 2) Required cart quantities, 3) Specific variants, 4) Size ranges, 5) Generic variety phrases, and 6) Explicit per-item math. TRIGGER CATCH-ALL: If the text says 'works on', 'cheaper', or 'cheapest', you MUST extract that variant! S&S COLLISION BAN: You are STRICTLY FORBIDDEN from extracting 'S&S' or 'Subscribe' here, even if the word 'cheaper' is next to it. S&S belongs exclusively to B8. SHIPPING BAN: You are STRICTLY FORBIDDEN from extracting shipping minimums. TITLE BLINDNESS: Ignore adjectives if they are ONLY in the title. TITLE EXCEPTION: Extract sizes and varieties from the extra text even if they share words with the title. If no facts exist outside the title, write "NONE"),
+"b2_strategies": (Array of 4 sentences. DEPENDENCY LOCK: If b2_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Translate the facts casually.
+- BLUEPRINT METHOD: You MUST include EVERY extracted fact in EVERY SINGLE sentence. Do not split them up!
+- RULE 1 (LIMITS): Frame limits casually: "Heads up, there is a limit of 5!" (Do NOT say 'add' or 'grab' for limits).
+- RULE 2 (QUANTITIES): Frame required minimums actively: "You need to add 4 of these!"
+- RULE 3 (VARIANTS & RANGES): IF SPECIFIC VARIANTS: You MUST print the literal variants. IF SPECIFIC RANGE: You MUST print the literal range. IF GENERIC VARIETY: "Make sure to pick your favorite color!".
+- ANTI-PARROT VERB ROTATION: For Quantities and Variants, you MUST randomly rotate between the verbs 'Choose', 'Select', 'Grab', and 'Pick'.
+- MATH MANDATE: If you extracted per-item math (e.g., '$16.88 per jug'), you MUST print that exact math in EVERY sentence. If no math was extracted, you are STRICTLY FORBIDDEN from calculating it yourself.
+- ACRONYM SCRUB: You MUST translate 'QTY' into plain English (e.g., 'items', 'of these'). You are STRICTLY FORBIDDEN from printing the literal letters 'QTY'.
+- TITLE ECHO BAN: You are STRICTLY FORBIDDEN from repeating the product title here. Use generic nouns (e.g., 'these', 'items').
+Do NOT use robotic filler phrases like 'It is fun to select'.),
+"b5_verification": (String. Extract any retailer-specific shipping/pickup requirements. If none, write "NONE"),
+"b5_perks": (Array of 4 sentences. DEPENDENCY LOCK: If b5_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Rephrase the shipping perk casually. 
+- RULE 1 (MULTI-PATH): If there are multiple ways to get the perk (e.g., 'Walmart+ OR $35 order'), you MUST state both paths.
+- EXACT VALUE: Include the exact dollar amount if provided.
+Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
+"b6_verification": (String. Does the text require a promo code, digital coupon, or clippable? If yes, note it. If no, write "NONE"),
+"b6_savings": (Array of 4 sentences. DEPENDENCY LOCK: If b6_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, dynamically write 4 casual reminders to check the box or enter the code.),
+"b7_occasions": (Array of 4 sentences. HOLIDAY LOCK: If the raw text EXPLICITLY says 'Arrives before [Holiday]', write 4 unique urgency sentences. If no explicit arrival time, write ["DEAD","DEAD","DEAD","DEAD"]),
+"b8_verification": (String. Extract ANY leftover facts explicitly stated in the extra text, including product specs, built-in features, capabilities, AND included accessories/bonuses. S&S OVERRIDE MANDATE: You MUST extract 'S&S', 'Subscribe', or 'Auto-delivery' even if it shares a line with a B2 quantity or the word 'cheaper'. Also extract 'No code needed', or 'Select accounts'. B2 COLLISION BAN: You are STRICTLY FORBIDDEN from extracting colors, size ranges, limits, or required cart quantities here. Colors and sizes belong exclusively to B2. If the only leftover facts are colors or sizes, write "NONE"),
+"b8_overflow": (Array of 4 sentences. DEPENDENCY LOCK: If b8_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Translate using these blueprints:
+- IF S&S / AUTO-DELIVERY: You MUST randomly rotate between these phrases: "Set up routine delivery to drop the total even more!", "Use the auto-delivery option to make it even cheaper!", "Opt for scheduled arrivals for an extra discount!" (Do NOT print 'S&S').
+- IF NO CODE NEEDED: "The total drops automatically at the end!" 
+- IF SELECT ACCOUNTS: "Heads up, this might only work for certain accounts!"
+- IF FEATURE OR ACCESSORY: Frame casually. SEMANTIC ENTITY LOCK: You MUST name the specific feature/accessory, but adjust the grammar so it sounds natural (e.g., If the text says 'Gloves included', say 'It even comes with gloves!', do NOT say 'It features Gloves included!'). You are STRICTLY FORBIDDEN from abstracting it into generic words like 'specs'.
+- ANTI-PARROT LOCK: You MUST use a VARIETY of phrasing across the 4 sentences. Do NOT repeat the exact same sentence structure.
+- COMPOUNDING: If you extracted multiple facts, combine them.
+Do NOT use thesaurus words like 'reduction'.),
+"b9_verification": (String. Extract a SECOND distinct leftover fact if one exists. If there is only ONE leftover fact total, write "NONE".),
+"b9_overflow": (Array of 4 sentences. DEPENDENCY LOCK: If b9_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, rephrase the SECOND fact 4 times.),
+${customLineInstruction}
+"dt_signoff": (String. 1 short lifestyle sentence. PRONOUN ENFORCEMENT: ${pronounInstruction} You MUST obey the pronoun rule above all else.),
+"emoji_pool": (Array of 30 UNIQUE emojis that logically complement the product's category. STRICT BAN: Do NOT use generic shapes, and NEVER use negative/warning emojis like 🚫, ❌, 🛑, or ⚠️.)
+GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Comment, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click here, Tap here, Check the bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Hack, Miracle, Cure, Guaranteed, Proven, 100% effective. CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
+        }
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.5 } 
+                })
+            });
+
+            const data = await response.json();
+            if(data.error) throw new Error(data.error.message);
+
+            let aiText = data.candidates[0].content.parts[0].text;
+            aiText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const aiData = JSON.parse(aiText);
+            
+            // --- JAVASCRIPT ASSEMBLY ENGINE ---
+            const isOdd = dealNum % 2 !== 0;
+            const extractedURL = extractURL(rawText);
+            
+            // RESTORED MISSING VARIABLES
+            const cleanTitle = cleanText(aiData.cleaned_title);
+            const retailer = cleanText(aiData.retailer_name) || "Amazon";
+            const dtSignoff = cleanText(aiData.dt_signoff);
+            
+            const rawEmojiPool = aiData.emoji_pool || [];
+            const uniqueEmojiPool = [...new Set(rawEmojiPool)]; 
+            const fallbackEmojis = ["📦","🛒","👇","✨","🔥","🎁","🛍️","🎉","🎈","🎊","🎀","🏷️","💫","🌟","🌿","🤎","🤍","✅","👀","💡"];
+            const finalEmojiPool = uniqueEmojiPool.length >= 8 ? uniqueEmojiPool : fallbackEmojis;
+
+            // DYNAMIC DICTIONARY SELECTOR
+            const pronounText = document.getElementById('pronounStyle').options[document.getElementById('pronounStyle').selectedIndex].text;
+            const is1stPerson = pronounText.includes('1st Person');
+            
+            const activeDiscoveries = is1stPerson ? discoveries1st : discoveries3rd;
+            const activePointers = is1stPerson ? pointers1st : pointers3rd;
+            const activeLinkLeads = is1stPerson ? linkLeads1st : linkLeads3rd;
+
+            const selectedPrefixes = shuffleArray(allPrefixes).slice(0, 4);
+            const selectedCompLabels = shuffleArray(allCompLabels).slice(0, 4);
+            const selectedShortPointers = shuffleArray(shortPointers).slice(0, 4);
+            const selectedHooks = shuffleArray(allCuriosityHooks).slice(0, 3);
+
+            // Using the dynamically selected arrays
+            const selectedDiscoveries = shuffleArray(activeDiscoveries).slice(0, 4);
+            const selectedPointers = shuffleArray(activePointers).slice(0, 4);
+            const selectedLinkLeads = shuffleArray(activeLinkLeads).slice(0, 4);
+
+            let masterEmojiPool = [...finalEmojiPool].sort(() => 0.5 - Math.random());
+            let masterEmojiIdx = 0;
+            const getNextEmoji = () => { 
+                let e = masterEmojiPool[masterEmojiIdx % masterEmojiPool.length]; 
+                masterEmojiIdx++; 
+                return e; 
+            };
+
+            function injectEmojisV8(linesArray, min, max) {
+                let count = 0;
+                let result = [];
+                for (let i = 0; i < linesArray.length; i++) {
+                    let line = linesArray[i];
+                    let linesLeft = linesArray.length - 1 - i;
+                    let needed = min - count;
+                    let opts = [];
+                    if (count < max) opts.push(1, 2); 
+                    if (count <= max - 2) opts.push(3); 
+                    if (count >= min || (linesLeft * 2 >= needed)) opts.push(0); 
+                    if (needed > 0) {
+                        if (linesLeft * 2 === needed) opts = [3];
+                        else if (linesLeft === needed && count >= max) opts = [0]; 
+                        else if (linesLeft === needed) opts = (count <= max - 2) ? [1, 2, 3] : [1, 2];
+                    }
+                    if (count >= max) opts = [0];
+                    let choice = opts[Math.floor(Math.random() * opts.length)];
+                    
+                    if (choice === 1) { line = `${getNextEmoji()} ${line}`; count++; }
+                    else if (choice === 2) { line = `${line} ${getNextEmoji()}`; count++; }
+                    else if (choice === 3) { line = `${getNextEmoji()} ${line} ${getNextEmoji()}`; count += 2; }
+                    result.push(line);
+                }
+                return result;
+            }
+
+            const rLower = rawText.toLowerCase();
+            const isPickup = rLower.includes('pickup') || rLower.includes('pick up') || rLower.includes('walgreens') || rLower.includes('w@lgreens');
+            const dynamicStatuses = isPickup ? ["Pickup!", "In-store!", "Grab at store!", "Local pickup!"] : ["Shipped!", "To your door!", "Delivery included!", "On its way!"];
+
+            const modeText = document.getElementById('dealType').options[document.getElementById('dealType').selectedIndex].text;
+
+            let phase0 = `[MODE: ${modeText} | PRONOUNS: ${pronounText}]\n${rawText}`;
+            if (customLine) phase0 += `\n[Custom Injection: ${customLine}]`;
+            document.getElementById('out-phase0').innerText = phase0;
+            currentRawOutput = `=== PHASE 0: TARGET LOCK ===\n${phase0}\n\n`;
+
+            let sl = [];
+            for(let i=0; i<3; i++) {
+                let priceDisplay = aiData.sale_price === "???" ? "???" : cleanText(aiData.sale_price);
+                let hook = `${selectedPrefixes[i]} ${priceDisplay.includes("???") ? priceDisplay : "$" + priceDisplay.replace('$', '')} ${dynamicStatuses[i]}`;
+                if(aiData.reg_price !== "NONE") hook += ` (${selectedCompLabels[i]} ${cleanText(aiData.reg_price)})`;
+                let flip = Math.random() > 0.5;
+                sl.push(flip ? `${hook} -- ${cleanTitle}` : `${cleanTitle} -- ${hook}`);
+            }
+
+            let postOutputs = [];
+            let commentOutputs = [];
+
+            if (dealType === 'regular') {
+                // REGULAR DEAL ASSEMBLY
+                for(let i=0; i<3; i++) {
+                    let b2 = aiData.b2_strategies[i] !== "DEAD" ? `${cleanText(aiData.b2_strategies[i])}` : "";
+                    let b5 = aiData.b5_perks && aiData.b5_perks[i] !== "DEAD" ? `${cleanText(aiData.b5_perks[i])} ` : "";
+                    let b6 = aiData.b6_savings && aiData.b6_savings[i] !== "DEAD" ? `${cleanText(aiData.b6_savings[i])} ` : "";
+                    let b7 = aiData.b7_occasions && aiData.b7_occasions[i] !== "DEAD" ? `${cleanText(aiData.b7_occasions[i])} ` : "";
+                    let b8 = aiData.b8_overflow && aiData.b8_overflow[i] !== "DEAD" ? `${cleanText(aiData.b8_overflow[i])} ` : "";
+                    let b9 = aiData.b9_overflow && aiData.b9_overflow[i] !== "DEAD" ? `${cleanText(aiData.b9_overflow[i])} ` : "";
+                    
+                    let bottomLine = `${b5}${b6}${b7}${b8}${b9}`.trim();
+                    let inf = cleanText(aiData.inferences[i]);
+                    
+                    let flipB1 = Math.random() > 0.5;
+                    let discText = selectedDiscoveries[i];
+                    if (!discText.startsWith("I ")) {
+                        discText = discText.charAt(0).toLowerCase() + discText.slice(1);
+                    }
+                    let discLine = flipB1 
+                        ? `${selectedDiscoveries[i]} on ${retailer}!` 
+                        : `On ${retailer}, ${discText}!`;
+                    
+                    let ptrLine = selectedPointers[i];
+                    let rawLines = [];
+                    const shuffleType = (i + dealNum) % 3; 
+                    
+                    if(shuffleType === 0) { 
+                        rawLines.push(discLine, sl[i]);
+                        if(b2) rawLines.push(`${b2} ${ptrLine}`); else rawLines.push(ptrLine);
+                        rawLines.push(inf);
+                        if(bottomLine) rawLines.push(bottomLine);
+                    } else if (shuffleType === 1) { 
+                        rawLines.push(inf, sl[i], discLine);
+                        if(b2) rawLines.push(`${ptrLine} ${b2}`); else rawLines.push(ptrLine);
+                        if(bottomLine) rawLines.push(bottomLine);
+                    } else { 
+                        rawLines.push(sl[i], discLine);
+                        if(bottomLine) rawLines.push(`${inf} ${bottomLine}`); else rawLines.push(inf);
+                        if(b2) rawLines.push(b2);
+                        rawLines.push(ptrLine);
+                    }
+
+                    let customText = aiData.custom_line_rephrases && aiData.custom_line_rephrases[i] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[i]) : "";
+                    if (customText) {
+                        const randIdx = Math.floor(Math.random() * (rawLines.length + 1));
+                        rawLines.splice(randIdx, 0, customText);
+                    }
+
+                    let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
+                    let postText = joinWithSpaceChaos(emojifiedLines, 2, 4);
+                    
+                    postOutputs.push(postText);
+                    document.getElementById(`out-post${i+1}`).innerText = postText;
+                    document.getElementById(`out-post${i+1}`).setAttribute('data-raw', postText);
+                    currentRawOutput += `=== POST VARIATION ${i+1} ===\n${postText}\n\n`;
+                }
+
+                for(let i=0; i<3; i++) {
+                    let praise = cleanText(aiData.praises[i]);
+                    let disc = cleanText(aiData.disclaimers[i]);
+                    let linkLine = `${selectedLinkLeads[i]} ${extractedURL}`;
+
+                    let rawLines = [];
+                    const commentType = (i + dealNum) % 3;
+
+                    if(commentType === 0) { 
+                        rawLines.push(`${praise} ${linkLine} ${disc}`);
+                    } else if (commentType === 1) { 
+                        rawLines.push(praise, linkLine, disc);
+                    } else { 
+                        rawLines.push(linkLine, `${disc} ${praise}`);
+                    }
+                    
+                    let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
+                    
+                    let cText = "";
+                    if(commentType === 0) cText = emojifiedLines[0];
+                    else if (commentType === 1) cText = emojifiedLines.join("\n\n");
+                    else cText = emojifiedLines.join("\n\n");
+
+                    commentOutputs.push(cText);
+                    document.getElementById(`out-com${i+1}`).innerText = cText;
+                    document.getElementById(`out-com${i+1}`).setAttribute('data-raw', cText);
+                    currentRawOutput += `=== COMMENT ${i+1} ===\n${cText}\n\n`;
+                }
+
+            } else {
+                // RUN DEAL ASSEMBLY
+                for(let i=0; i<3; i++) {
+                    let hook = selectedHooks[i];
+                    let inf = cleanText(aiData.inferences[i]);
+                    let keyword = cleanText(aiData.scrubbed_keyword);
+                    let ptrLine = selectedShortPointers[i];
+                    
+                    let rawLines = [`${hook} ${inf} with this ${keyword}! ${ptrLine}`];
+                    
+                    let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
+                    let postText = emojifiedLines[0];
+                    
+                    postOutputs.push(postText);
+                    document.getElementById(`out-post${i+1}`).innerText = postText;
+                    document.getElementById(`out-post${i+1}`).setAttribute('data-raw', postText);
+                    currentRawOutput += `=== POST VARIATION ${i+1} ===\n${postText}\n\n`;
+                }
+
+                for(let i=0; i<3; i++) {
+                    let praise = cleanText(aiData.praises[i]);
+                    let disc = cleanText(aiData.disclaimers[i]);
+                    let linkLine = `${selectedLinkLeads[i]} ${extractedURL}`;
+                    
+                    let flipB1 = Math.random() > 0.5;
+                    let discText = selectedDiscoveries[i];
+                    if (!discText.startsWith("I ")) {
+                        discText = discText.charAt(0).toLowerCase() + discText.slice(1);
+                    }
+                    let discLine = flipB1 
+                        ? `${selectedDiscoveries[i]} on ${retailer}!` 
+                        : `On ${retailer}, ${discText}!`;
+
+                    let b2 = aiData.b2_strategies[i] !== "DEAD" ? `${cleanText(aiData.b2_strategies[i])}` : "";
+                    let b5 = aiData.b5_perks && aiData.b5_perks[i] !== "DEAD" ? `${cleanText(aiData.b5_perks[i])} ` : "";
+                    let b6 = aiData.b6_savings && aiData.b6_savings[i] !== "DEAD" ? `${cleanText(aiData.b6_savings[i])} ` : "";
+                    let b7 = aiData.b7_occasions && aiData.b7_occasions[i] !== "DEAD" ? `${cleanText(aiData.b7_occasions[i])} ` : "";
+                    let b8 = aiData.b8_overflow && aiData.b8_overflow[i] !== "DEAD" ? `${cleanText(aiData.b8_overflow[i])} ` : "";
+                    let b9 = aiData.b9_overflow && aiData.b9_overflow[i] !== "DEAD" ? `${cleanText(aiData.b9_overflow[i])} ` : "";
+                    
+                    let bottomLine = `${b5}${b6}${b7}${b8}${b9}`.trim(); // Removed b2 from bottomLine
+
+                    let rawLines = [];
+                    
+                    const commentType = (i + dealNum) % 3;
+                    if(commentType === 0) { 
+                        rawLines.push(discLine);
+                        rawLines.push(sl[i]);
+                        if (b2) rawLines.push(b2); // Injects B2 right after the price
+                        rawLines.push(praise);
+                        rawLines.push(linkLine);
+                        rawLines.push(disc);
+                        if (bottomLine) rawLines.push(bottomLine);
+                    } else if (commentType === 1) { 
+                        rawLines.push(praise);
+                        rawLines.push(linkLine);
+                        rawLines.push(disc);
+                        rawLines.push(discLine);
+                        rawLines.push(sl[i]);
+                        if (b2) rawLines.push(b2); // Injects B2 right after the price
+                        if (bottomLine) rawLines.push(bottomLine);
+                    } else { 
+                        rawLines.push(linkLine);
+                        rawLines.push(`${disc} ${praise}`);
+                        rawLines.push(`${discLine} ${sl[i]}`);
+                        if (b2) rawLines.push(b2); // Injects B2 right after the price
+                        if (bottomLine) rawLines.push(bottomLine);
+                    }
+
+                    let customText = aiData.custom_line_rephrases && aiData.custom_line_rephrases[i] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[i]) : "";
+                    if (customText) {
+                        const randIdx = Math.floor(Math.random() * (rawLines.length + 1));
+                        rawLines.splice(randIdx, 0, customText);
+                    }
+
+                    let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
+                    let cText = joinWithSpaceChaos(emojifiedLines, 2, 4);
+
+                    commentOutputs.push(cText);
+                    document.getElementById(`out-com${i+1}`).innerText = cText;
+                    document.getElementById(`out-com${i+1}`).setAttribute('data-raw', cText);
+                    currentRawOutput += `=== COMMENT ${i+1} ===\n${cText}\n\n`;
+                }
+            }
+
+            // DAILY THREAD ASSEMBLY (Universal)
+            let priceDisplayDT = aiData.sale_price === "???" ? "???" : cleanText(aiData.sale_price);
+            let dtHook = `${selectedPrefixes[3]} ${priceDisplayDT.includes("???") ? priceDisplayDT : "$" + priceDisplayDT.replace('$', '')} ${dynamicStatuses[3]}`;
+            
+            let dtHeader = isOdd ? `${dtHook} on ${retailer} -- ${cleanTitle}` : `${cleanTitle} -- ${dtHook} on ${retailer}`;
+            if(aiData.reg_price !== "NONE") dtHeader += ` (${selectedCompLabels[3]} ${cleanText(aiData.reg_price)})`;
+            
+            let dtB2 = aiData.b2_strategies[3] !== "DEAD" ? cleanText(aiData.b2_strategies[3]) : "";
+            let dtB5 = aiData.b5_perks && aiData.b5_perks[3] !== "DEAD" ? `${cleanText(aiData.b5_perks[3])} ` : "";
+            let dtB6 = aiData.b6_savings && aiData.b6_savings[3] !== "DEAD" ? `${cleanText(aiData.b6_savings[3])} ` : "";
+            let dtB7 = aiData.b7_occasions && aiData.b7_occasions[3] !== "DEAD" ? `${cleanText(aiData.b7_occasions[3])} ` : "";
+            let dtB8 = aiData.b8_overflow && aiData.b8_overflow[3] !== "DEAD" ? `${cleanText(aiData.b8_overflow[3])} ` : "";
+            let dtB9 = aiData.b9_overflow && aiData.b9_overflow[3] !== "DEAD" ? `${cleanText(aiData.b9_overflow[3])} ` : "";
+            
+            let dtOverflow = `${dtB5}${dtB6}${dtB7}${dtB8}${dtB9}`.trim();
+
+            let rawDtLines = [];
+            if(isOdd) {
+                rawDtLines.push(dtHeader, `Check it out right here: ${extractedURL}`, dtSignoff);
+                if(dtB2) rawDtLines.push(dtB2);
+                if(dtOverflow) rawDtLines.push(dtOverflow);
+            } else {
+                rawDtLines.push(dtSignoff, dtHeader, `Check it out right here: ${extractedURL}`);
+                if(dtB2) rawDtLines.push(dtB2);
+                if(dtOverflow) rawDtLines.push(dtOverflow);
+            }
+
+            let customTextDT = aiData.custom_line_rephrases && aiData.custom_line_rephrases[3] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[3]) : "";
+            if (customTextDT) {
+                const randIdxDT = Math.floor(Math.random() * (rawDtLines.length + 1));
+                rawDtLines.splice(randIdxDT, 0, customTextDT);
+            }
+
+            let emojifiedDtLines = injectEmojisV8(rawDtLines, 3, 5);
+            let dtText = joinWithSpaceChaos(emojifiedDtLines, 2, 4);
+
+            document.getElementById('out-dt').innerText = dtText;
+            document.getElementById('out-dt').setAttribute('data-raw', dtText);
+            currentRawOutput += `=== DAILY THREAD COMMENT ===\n${dtText}`;
+
+            dealCount++;
+            const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            
+            const dealData = {
+                phase0: phase0,
+                posts: postOutputs,
+                comments: commentOutputs,
+                dt: dtText,
+                raw: currentRawOutput
+            };
+            sessionHistory.push(dealData);
+            const index = sessionHistory.length - 1;
+
+            const historyLog = document.getElementById('historyLog');
+            const emptyMsg = document.getElementById('emptyHistory');
+            if(emptyMsg) emptyMsg.remove();
+
+            const historyCard = `
+                <div class="history-card" onclick="loadHistory(${index})">
+                    <span class="history-time">${day} • ${timestamp}</span>
+                    <div class="history-title">Deal ${dealNum}: ${cleanTitle}</div>
+                </div>
+            `;
+            
+            historyLog.innerHTML = historyCard + historyLog.innerHTML;
+            document.getElementById('sessionBaseHeader').innerText = `📚 SESSION BASE (${dealCount} / 14)`;
+
+            if(dealNum < 7) dealNumInput.value = dealNum + 1;
+            else dealNumInput.value = 1;
+            updateButtonText();
+
+            document.getElementById('rawText').value = "";
+            document.getElementById('customLine').value = "";
+
+        } catch (error) {
+            alert("Error: " + error.message);
+        } finally {
+            updateButtonText();
+            btn.disabled = false;
+        }
+    }
+
+    function loadHistory(index) {
+        const data = sessionHistory[index];
+        document.getElementById('outputSection').style.display = "block";
+        document.getElementById('out-phase0').innerText = data.phase0;
+        currentRawOutput = data.raw; 
+        
+        for(let i=0; i<3; i++) {
+            document.getElementById(`out-post${i+1}`).innerText = data.posts[i];
+            document.getElementById(`out-post${i+1}`).setAttribute('data-raw', data.posts[i]);
+            document.getElementById(`out-com${i+1}`).innerText = data.comments[i];
+            document.getElementById(`out-com${i+1}`).setAttribute('data-raw', data.comments[i]);
+        }
+        document.getElementById('out-dt').innerText = data.dt;
+        document.getElementById('out-dt').setAttribute('data-raw', data.dt);
+        
+        document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copyToClipboard(elementId, btnElement) {
+        const textToCopy = document.getElementById(elementId).getAttribute('data-raw');
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "✅ Copied!";
+            btnElement.style.background = "#e6f4ea";
+            btnElement.style.color = "#0f9d58";
+            btnElement.style.borderColor = "#0f9d58";
+            setTimeout(() => { 
+                btnElement.innerText = originalText; 
+                btnElement.style.background = "#f8f9fa"; 
+                btnElement.style.color = "var(--text-muted)";
+                btnElement.style.borderColor = "var(--border)";
+            }, 2000);
+        }).catch(err => {
+            alert("Failed to copy text: " + err);
+        });
+    }
+
+    function copyRawOutput(btnElement) {
+        if(!currentRawOutput) { alert("No output generated yet!"); return; }
+        navigator.clipboard.writeText(currentRawOutput).then(() => {
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "✅ Copied Raw Output!";
+            btnElement.style.background = "#e6f4ea";
+            btnElement.style.color = "#0f9d58";
+            btnElement.style.borderColor = "#0f9d58";
+            setTimeout(() => { 
+                btnElement.innerText = originalText; 
+                btnElement.style.background = "#f8f9fa"; 
+                btnElement.style.color = "var(--text-main)";
+                btnElement.style.borderColor = "var(--border)";
+            }, 2000);
+        }).catch(err => {
+            alert("Failed to copy text: " + err);
+        });
+    }
+</script>
+
+</body>
+</html>
