@@ -292,7 +292,7 @@
             
             select.innerHTML = ''; 
             
-            // THE JUNK FILTER: Excludes robotics, audio, image, and TTS models
+            // THE AGGRESSIVE JUNK FILTER
             const textModels = data.models.filter(m => 
                 m.supportedGenerationMethods.includes("generateContent") && 
                 m.name.includes("gemini") &&
@@ -300,7 +300,10 @@
                 !m.name.includes("tts") &&
                 !m.name.includes("image") &&
                 !m.name.includes("audio") &&
-                !m.name.includes("robotics")
+                !m.name.includes("robotics") &&
+                !m.name.includes("customtools") && // Blocks tool-use models
+                !m.name.includes("computer-use") && // Blocks automation models
+                !m.name.includes("embedding") // Blocks data-sorting models
             );
             
             textModels.sort((a, b) => b.name.localeCompare(a.name));
