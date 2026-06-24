@@ -292,10 +292,15 @@
             
             select.innerHTML = ''; 
             
+            // THE JUNK FILTER: Excludes robotics, audio, image, and TTS models
             const textModels = data.models.filter(m => 
                 m.supportedGenerationMethods.includes("generateContent") && 
                 m.name.includes("gemini") &&
-                !m.name.includes("vision") 
+                !m.name.includes("vision") &&
+                !m.name.includes("tts") &&
+                !m.name.includes("image") &&
+                !m.name.includes("audio") &&
+                !m.name.includes("robotics")
             );
             
             textModels.sort((a, b) => b.name.localeCompare(a.name));
