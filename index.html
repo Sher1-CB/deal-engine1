@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Deal Generator v9.00</title>
+    <title>The CB Deal Generator v9.01</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -172,7 +172,7 @@
 
     <div class="right-col">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; margin-top: -30px;">
-            <span class="version-tag">v9.00</span>
+            <span class="version-tag">v9.01</span>
         </div>
         <div class="card">
             <div class="card-header" id="sessionBaseHeaderContainer">
@@ -273,7 +273,7 @@
     let sessionHistory = []; 
     let currentRawOutput = ""; 
     
-    // V9.00 Global Variables for Shuffle Engine
+    // V9.01 Global Variables for Shuffle Engine
     let lastAiData = null;
     let lastRawText = "";
     let lastCustomLine = "";
@@ -437,6 +437,7 @@
         return match ? match[0] : "https://thecouponboutique.com/";
     }
 
+    // V9.01 DEEP SPACE CHAOS ENGINE
     function joinWithSpaceChaos(linesArray, minBlank, maxBlank) {
         if (!linesArray || linesArray.length === 0) return "";
         if (linesArray.length === 1) return linesArray[0];
@@ -449,7 +450,10 @@
         let numSingleSpaces = numGaps - numDoubleSpaces;
         
         let separators = [];
-        for(let i=0; i<numDoubleSpaces; i++) separators.push('\n\n');
+        for(let i=0; i<numDoubleSpaces; i++) {
+            // 15% chance to create a massive triple line break
+            separators.push(Math.random() > 0.85 ? '\n\n\n' : '\n\n'); 
+        }
         for(let i=0; i<numSingleSpaces; i++) separators.push('\n');
         
         separators = separators.sort(() => 0.5 - Math.random());
@@ -543,7 +547,7 @@ ${customLineInstruction}
 "emoji_pool": (Array of 30 UNIQUE emojis that logically complement the product's category. STRICT BAN: Do NOT use generic shapes, and NEVER use negative/warning emojis like 🚫, ❌, 🛑, or ⚠️.)
 GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Comment, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click, Click here, Tap, Tap here, Check the bio, Bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Hack, Miracle, Cure, Guaranteed, Proven, 100% effective. CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
         } else {
-            // V9.00 RUN DEAL PROMPT
+            // V9.01 RUN DEAL PROMPT
             prompt = `Analyze this deal: "${rawText}"
 Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings.
 "retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart", "Amazon Haul", "Target". Fix leetspeak like W@lm@rt. You MUST capture multi-word retailers exactly as written. Do NOT truncate them.),
@@ -677,10 +681,12 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
         const selectedPointers = shuffleArray(activePointers).slice(0, 4);
         const selectedLinkLeads = shuffleArray(activeLinkLeads).slice(0, 4);
 
+        // V9.01 RETAILER SYNTAX MATRIX
         const titleSeparators = [" -- ", " - ", " | ", " ~ ", " // ", " ✨ ", " 👉 ", " : "];
         const runConnectors = ["with this", "using this", "thanks to this", "grabbing this", "via this"];
-        const retPrefixes = [`On ${retailer},`, `At ${retailer},`, `Over at ${retailer},`, `Checking ${retailer},`];
-        const retSuffixes = [`on ${retailer}!`, `at ${retailer}!`, `via ${retailer}!`, `from ${retailer}!`];
+        const retPrefixes = [`On ${retailer},`, `At ${retailer},`, `Over at ${retailer},`, `Checking ${retailer},`, `Found on ${retailer},`, `Spotted on ${retailer},`, `Browsing ${retailer},`, `Shopping ${retailer},`];
+        const retSuffixes = [`on ${retailer}!`, `at ${retailer}!`, `via ${retailer}!`, `from ${retailer}!`, `over on ${retailer}!`, `through ${retailer}!`, `thanks to ${retailer}!`];
+        const retTags = [`[${retailer}]`, `| ${retailer} |`, `📍 ${retailer}`, `🛒 ${retailer}`, `🏷️ ${retailer}`];
         
         const wrapRegPrice = (text) => {
             const styles = [`(${text})`, `[${text}]`, `- ${text}`, `~${text}~`];
@@ -763,9 +769,20 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
                     discText = discText.charAt(0).toLowerCase() + discText.slice(1);
                 }
                 
+                // V9.01 RETAILER SYNTAX MATRIX
                 let rPref = retPrefixes[Math.floor(Math.random() * retPrefixes.length)];
                 let rSuff = retSuffixes[Math.floor(Math.random() * retSuffixes.length)];
-                let discLine = flipB1 ? `${selectedDiscoveries[i]} ${rSuff}` : `${rPref} ${discText}!`;
+                let rTag = retTags[Math.floor(Math.random() * retTags.length)];
+                
+                let formatRoll = Math.random();
+                let discLine = "";
+                if (formatRoll < 0.33) {
+                    discLine = `${rPref} ${discText}!`;
+                } else if (formatRoll < 0.66) {
+                    discLine = `${selectedDiscoveries[i]} ${rSuff}`;
+                } else {
+                    discLine = `${rTag} ${selectedDiscoveries[i]}!`;
+                }
                 
                 let ptrLine = selectedPointers[i];
                 let rawLines = [];
@@ -807,10 +824,9 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
                 let disc = cleanText(aiData.disclaimers[i]);
                 let linkLead = selectedLinkLeads[i];
                 
-                // V9.00 Comment Entropy Engine
-                let keepPraise = Math.random() > 0.2; // 80% chance to keep praise
-                let keepDisc = Math.random() > 0.15; // 85% chance to keep disclaimer
-                let keepLead = Math.random() > 0.2; // 80% chance to keep link lead phrase
+                let keepPraise = Math.random() > 0.2; 
+                let keepDisc = Math.random() > 0.15; 
+                let keepLead = Math.random() > 0.2; 
                 
                 let finalLink = keepLead ? `${linkLead} ${extractedURL}` : extractedURL;
 
@@ -819,7 +835,6 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
                 rawLines.push(finalLink);
                 if (keepDisc) rawLines.push(disc);
                 
-                // Randomly shuffle the order of the comment elements
                 rawLines = rawLines.sort(() => 0.5 - Math.random());
                 
                 let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
@@ -862,9 +877,20 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
                     discText = discText.charAt(0).toLowerCase() + discText.slice(1);
                 }
                 
+                // V9.01 RETAILER SYNTAX MATRIX
                 let rPref = retPrefixes[Math.floor(Math.random() * retPrefixes.length)];
                 let rSuff = retSuffixes[Math.floor(Math.random() * retSuffixes.length)];
-                let discLine = flipB1 ? `${selectedDiscoveries[i]} ${rSuff}` : `${rPref} ${discText}!`;
+                let rTag = retTags[Math.floor(Math.random() * retTags.length)];
+                
+                let formatRoll = Math.random();
+                let discLine = "";
+                if (formatRoll < 0.33) {
+                    discLine = `${rPref} ${discText}!`;
+                } else if (formatRoll < 0.66) {
+                    discLine = `${selectedDiscoveries[i]} ${rSuff}`;
+                } else {
+                    discLine = `${rTag} ${selectedDiscoveries[i]}!`;
+                }
 
                 let b2 = aiData.b2_strategies[i] !== "DEAD" ? `${cleanText(aiData.b2_strategies[i])}` : "";
                 let b5 = aiData.b5_perks && aiData.b5_perks[i] !== "DEAD" ? `${cleanText(aiData.b5_perks[i])} ` : "";
@@ -875,7 +901,6 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
                 
                 let bottomLine = `${b5}${b6}${b7}${b8}${b9}`.trim();
 
-                // V9.00 Comment Entropy Engine for Run Deals
                 let keepPraise = Math.random() > 0.2; 
                 let keepDisc = Math.random() > 0.15; 
                 let keepLead = Math.random() > 0.2; 
@@ -928,14 +953,16 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
         
         let dtOverflow = `${dtB5}${dtB6}${dtB7}${dtB8}${dtB9}`.trim();
 
+        // V9.01 Daily Thread Link Scrub
+        let dtLinkLead = selectedLinkLeads[3] || "Check it out right here:"; 
+
         let rawDtLines = [];
         if(isOdd) {
-            rawDtLines.push(dtHeader, `Check it out right here: ${extractedURL}`, dtSignoff);
+            rawDtLines.push(dtHeader, `${dtLinkLead} ${extractedURL}`, dtSignoff);
         } else {
-            rawDtLines.push(dtSignoff, dtHeader, `Check it out right here: ${extractedURL}`);
+            rawDtLines.push(dtSignoff, dtHeader, `${dtLinkLead} ${extractedURL}`);
         }
         
-        // V9.00 Floating Daily Thread B2/B8
         if(dtB2) rawDtLines.splice(Math.floor(Math.random() * (rawDtLines.length + 1)), 0, dtB2);
         if(dtOverflow) rawDtLines.splice(Math.floor(Math.random() * (rawDtLines.length + 1)), 0, dtOverflow);
 
@@ -952,7 +979,6 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
         document.getElementById('out-dt').setAttribute('data-raw', dtText);
         currentRawOutput += `=== DAILY THREAD COMMENT ===\n${dtText}`;
 
-        // Only push to history if this is a fresh generation (not a shuffle)
         if (!document.getElementById('shuffleButton').style.display || document.getElementById('shuffleButton').style.display === "none") {
             dealCount++;
             const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
