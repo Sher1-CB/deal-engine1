@@ -80,7 +80,7 @@
 <div class="header-container">
     <div class="header-icon">📚</div>
     <div class="header-title">
-        <h1>The CB Deal Generator - Extra</h1>
+        <h1>The CB Deal Generator - EXTRA</h1>
         <p>Precision Social Media Deal Generation Workspace</p>
     </div>
 </div>
@@ -273,7 +273,7 @@
     let sessionHistory = []; 
     let currentRawOutput = ""; 
     
-    // V9.01 Global Variables for Shuffle Engine
+    // V9.00 Global Variables for Shuffle Engine
     let lastAiData = null;
     let lastRawText = "";
     let lastCustomLine = "";
@@ -979,6 +979,7 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
         document.getElementById('out-dt').setAttribute('data-raw', dtText);
         currentRawOutput += `=== DAILY THREAD COMMENT ===\n${dtText}`;
 
+        // Only push to history if this is a fresh generation (not a shuffle)
         if (!document.getElementById('shuffleButton').style.display || document.getElementById('shuffleButton').style.display === "none") {
             dealCount++;
             const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
