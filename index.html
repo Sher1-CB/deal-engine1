@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Deal Generator v8.99b</title>
+    <title>The CB Deal Generator v9.00</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -161,7 +161,10 @@
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
                 <span style="font-size: 12px; color: var(--text-muted);" id="nextTargetText">Next target: <strong>Deal 1</strong>. Output saves automatically to ledger.</span>
-                <button id="apiButton" onclick="processDeal()">✨ Generate Deal 1</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="shuffleButton" onclick="reShuffleLayout()" class="btn-outline" style="display:none;">🔀 Shuffle Layout</button>
+                    <button id="apiButton" onclick="processDeal()">✨ Generate Deal 1</button>
+                </div>
             </div>
         </div>
 
@@ -169,7 +172,7 @@
 
     <div class="right-col">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; margin-top: -30px;">
-            <span class="version-tag">v8.99b</span>
+            <span class="version-tag">v9.00</span>
         </div>
         <div class="card">
             <div class="card-header" id="sessionBaseHeaderContainer">
@@ -269,6 +272,11 @@
     let dealCount = 0;
     let sessionHistory = []; 
     let currentRawOutput = ""; 
+    
+    // V9.00 Global Variables for Shuffle Engine
+    let lastAiData = null;
+    let lastRawText = "";
+    let lastCustomLine = "";
 
     document.addEventListener("DOMContentLoaded", () => {
         const savedKey = localStorage.getItem('geminiApiKey');
@@ -292,11 +300,10 @@
             
             select.innerHTML = ''; 
             
-            // THE FUTURE-PROOF WHITELIST FILTER
             const textModels = data.models.filter(m => 
                 m.supportedGenerationMethods.includes("generateContent") && 
                 m.name.includes("gemini") &&
-                (m.name.includes("flash") || m.name.includes("pro") || m.name.includes("lite")) && // MUST be a core text model
+                (m.name.includes("flash") || m.name.includes("pro") || m.name.includes("lite")) && 
                 !m.name.includes("vision") &&
                 !m.name.includes("tts") &&
                 !m.name.includes("image") &&
@@ -335,6 +342,8 @@
         document.getElementById('customLine').value = '';
         sessionHistory = [];
         dealCount = 0;
+        lastAiData = null;
+        document.getElementById('shuffleButton').style.display = "none";
         const historyLog = document.getElementById('historyLog');
         historyLog.innerHTML = `
             <div style="text-align: center; padding: 30px 20px; color: var(--text-muted);" id="emptyHistory">
@@ -456,12 +465,9 @@
         const apiKey = document.getElementById('apiKey').value.trim();
         const rawText = document.getElementById('rawText').value.trim();
         const customLine = document.getElementById('customLine').value.trim();
-        const day = document.getElementById('currentDay').value;
         const selectedModel = document.getElementById('aiModel').value;
         const pronounStyle = document.getElementById('pronounStyle').value;
         const dealType = document.getElementById('dealType').value;
-        let dealNumInput = document.getElementById('dealNumber');
-        let dealNum = parseInt(dealNumInput.value);
         const btn = document.getElementById('apiButton');
 
         if(!apiKey || !rawText) { alert("Please provide API Key and Raw Text!"); return; }
@@ -471,8 +477,7 @@
             sessionHistory = [];
             dealCount = 0;
             document.getElementById('historyLog').innerHTML = ''; 
-            dealNum = 1; 
-            dealNumInput.value = 1;
+            document.getElementById('dealNumber').value = 1;
         }
 
         btn.innerHTML = "⏳ Generating...";
@@ -493,7 +498,6 @@
         let prompt = "";
 
         if (dealType === 'regular') {
-            // V8.99b REGULAR DEAL PROMPT
             prompt = `Analyze this deal: "${rawText}"
 Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings.
 "retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart", "Amazon Haul", "Target". Fix leetspeak like W@lm@rt. You MUST capture multi-word retailers exactly as written. Do NOT truncate them.),
@@ -539,7 +543,7 @@ ${customLineInstruction}
 "emoji_pool": (Array of 30 UNIQUE emojis that logically complement the product's category. STRICT BAN: Do NOT use generic shapes, and NEVER use negative/warning emojis like 🚫, ❌, 🛑, or ⚠️.)
 GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Comment, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click, Click here, Tap, Tap here, Check the bio, Bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Hack, Miracle, Cure, Guaranteed, Proven, 100% effective. CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
         } else {
-            // V8.99b RUN DEAL PROMPT
+            // V9.00 RUN DEAL PROMPT
             prompt = `Analyze this deal: "${rawText}"
 Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings.
 "retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart", "Amazon Haul", "Target". Fix leetspeak like W@lm@rt. You MUST capture multi-word retailers exactly as written. Do NOT truncate them.),
@@ -603,343 +607,353 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
 
             let aiText = data.candidates[0].content.parts[0].text;
             aiText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
-            const aiData = JSON.parse(aiText);
             
-            // --- JAVASCRIPT ASSEMBLY ENGINE ---
-            const isOdd = dealNum % 2 !== 0;
-            const extractedURL = extractURL(rawText);
+            // Save to global variables for the Shuffle Engine
+            lastAiData = JSON.parse(aiText);
+            lastRawText = rawText;
+            lastCustomLine = customLine;
             
-            // RESTORED MISSING VARIABLES (Title, Retailer, Emojis)
-            const cleanTitle = cleanText(aiData.cleaned_title);
-            const retailer = cleanText(aiData.retailer_name) || "Amazon";
-            const dtSignoff = cleanText(aiData.dt_signoff);
-
-            const rawEmojiPool = aiData.emoji_pool || [];
-            const uniqueEmojiPool = [...new Set(rawEmojiPool)]; 
-            // Supersized fallback pool to guarantee massive variety if AI gets lazy
-            const fallbackEmojis = ["📦","🛒","👇","✨","🔥","🎁","🛍️","🎉","🎈","🎊","🎀","🏷️","💫","🌟","🌿","🤎","🤍","✅","👀","💡","🎯","📌","📍","💳","💸","💎","🏆","🥇","🚀","⚡","💥","💯","📣","🔔","📢","💬","💭"];
-            const finalEmojiPool = uniqueEmojiPool.length >= 15 ? uniqueEmojiPool : fallbackEmojis;
-
-            // The "Draw Bag" Emoji Engine
-            let masterEmojiPool = [...finalEmojiPool];
-            let drawBag = [];
-
-            const getNextEmoji = () => { 
-                if (drawBag.length === 0) {
-                    drawBag = [...masterEmojiPool].sort(() => 0.5 - Math.random());
-                }
-                return drawBag.pop(); 
-            };
-
-            // DYNAMIC DICTIONARY SELECTOR
-            const pronounText = document.getElementById('pronounStyle').options[document.getElementById('pronounStyle').selectedIndex].text;
-            const is1stPerson = pronounText.includes('1st Person');
+            buildLayout();
             
-            const activeDiscoveries = is1stPerson ? discoveries1st : discoveries3rd;
-            const activePointers = is1stPerson ? pointers1st : pointers3rd;
-            const activeLinkLeads = is1stPerson ? linkLeads1st : linkLeads3rd;
+            // Show the shuffle button
+            document.getElementById('shuffleButton').style.display = "block";
 
-            const selectedPrefixes = shuffleArray(allPrefixes).slice(0, 4);
-            const selectedCompLabels = shuffleArray(allCompLabels).slice(0, 4);
-            const selectedShortPointers = shuffleArray(shortPointers).slice(0, 4);
-            const selectedHooks = shuffleArray(allCuriosityHooks).slice(0, 3);
+        } catch (error) {
+            alert("Error: " + error.message);
+        } finally {
+            updateButtonText();
+            btn.disabled = false;
+        }
+    }
 
-            const selectedDiscoveries = shuffleArray(activeDiscoveries).slice(0, 4);
-            const selectedPointers = shuffleArray(activePointers).slice(0, 4);
-            const selectedLinkLeads = shuffleArray(activeLinkLeads).slice(0, 4);
+    function reShuffleLayout() {
+        if (!lastAiData) return;
+        buildLayout();
+    }
 
-            // SYNTAX SHUFFLERS (Destroys Structural Footprints)
-            const titleSeparators = [" -- ", " - ", " | ", " ~ ", " // ", " ✨ ", " 👉 ", " : "];
-            const runConnectors = ["with this", "using this", "thanks to this", "grabbing this", "via this"];
-            const retPrefixes = [`On ${retailer},`, `At ${retailer},`, `Over at ${retailer},`, `Checking ${retailer},`];
-            const retSuffixes = [`on ${retailer}!`, `at ${retailer}!`, `via ${retailer}!`, `from ${retailer}!`];
-            
-            const wrapRegPrice = (text) => {
-                const styles = [`(${text})`, `[${text}]`, `- ${text}`, `~${text}~`];
-                return styles[Math.floor(Math.random() * styles.length)];
-            };
+    function buildLayout() {
+        const aiData = lastAiData;
+        const rawText = lastRawText;
+        const customLine = lastCustomLine;
+        const dealType = document.getElementById('dealType').value;
+        let dealNum = parseInt(document.getElementById('dealNumber').value);
+        const day = document.getElementById('currentDay').value;
 
-            function injectEmojisV8(linesArray, min, max) {
-                let count = 0;
-                let result = [];
-                for (let i = 0; i < linesArray.length; i++) {
-                    let line = linesArray[i];
-                    let linesLeft = linesArray.length - 1 - i;
-                    let needed = min - count;
-                    let opts = [];
-                    if (count < max) opts.push(1, 2); 
-                    if (count <= max - 2) opts.push(3); 
-                    if (count >= min || (linesLeft * 2 >= needed)) opts.push(0); 
-                    if (needed > 0) {
-                        if (linesLeft * 2 === needed) opts = [3];
-                        else if (linesLeft === needed && count >= max) opts = [0]; 
-                        else if (linesLeft === needed) opts = (count <= max - 2) ? [1, 2, 3] : [1, 2];
-                    }
-                    if (count >= max) opts = [0];
-                    let choice = opts[Math.floor(Math.random() * opts.length)];
-                    
-                    if (choice === 1) { line = `${getNextEmoji()} ${line}`; count++; }
-                    else if (choice === 2) { line = `${line} ${getNextEmoji()}`; count++; }
-                    else if (choice === 3) { line = `${getNextEmoji()} ${line} ${getNextEmoji()}`; count += 2; }
-                    result.push(line);
-                }
-                return result;
+        const isOdd = dealNum % 2 !== 0;
+        const extractedURL = extractURL(rawText);
+        
+        const cleanTitle = cleanText(aiData.cleaned_title);
+        const retailer = cleanText(aiData.retailer_name) || "Amazon";
+        const dtSignoff = cleanText(aiData.dt_signoff);
+
+        const rawEmojiPool = aiData.emoji_pool || [];
+        const uniqueEmojiPool = [...new Set(rawEmojiPool)]; 
+        const fallbackEmojis = ["📦","🛒","👇","✨","🔥","🎁","🛍️","🎉","🎈","🎊","🎀","🏷️","💫","🌟","🌿","🤎","🤍","✅","👀","💡","🎯","📌","📍","💳","💸","💎","🏆","🥇","🚀","⚡","💥","💯","📣","🔔","📢","💬","💭"];
+        const finalEmojiPool = uniqueEmojiPool.length >= 15 ? uniqueEmojiPool : fallbackEmojis;
+
+        let masterEmojiPool = [...finalEmojiPool];
+        let drawBag = [];
+
+        const getNextEmoji = () => { 
+            if (drawBag.length === 0) {
+                drawBag = [...masterEmojiPool].sort(() => 0.5 - Math.random());
             }
+            return drawBag.pop(); 
+        };
 
-            const rLower = rawText.toLowerCase();
-            const isPickup = rLower.includes('pickup') || rLower.includes('pick up') || rLower.includes('walgreens') || rLower.includes('w@lgreens');
-            const dynamicStatuses = isPickup ? ["Pickup!", "In-store!", "Grab at store!", "Local pickup!"] : ["Shipped!", "To your door!", "Delivery included!", "On its way!"];
+        const pronounText = document.getElementById('pronounStyle').options[document.getElementById('pronounStyle').selectedIndex].text;
+        const is1stPerson = pronounText.includes('1st Person');
+        
+        const activeDiscoveries = is1stPerson ? discoveries1st : discoveries3rd;
+        const activePointers = is1stPerson ? pointers1st : pointers3rd;
+        const activeLinkLeads = is1stPerson ? linkLeads1st : linkLeads3rd;
 
-            // "As Low As" Auto-Detector
-            const isAsLowAs = rLower.includes('as low as') || rLower.includes('starting at') || rLower.includes('cheapest');
-            const selectedLowPrefixes = shuffleArray(["As low as", "Starting at", "From", "Dropping to"]).slice(0, 4);
+        const selectedPrefixes = shuffleArray(allPrefixes).slice(0, 4);
+        const selectedCompLabels = shuffleArray(allCompLabels).slice(0, 4);
+        const selectedShortPointers = shuffleArray(shortPointers).slice(0, 4);
+        const selectedHooks = shuffleArray(allCuriosityHooks).slice(0, 3);
 
-            const modeText = document.getElementById('dealType').options[document.getElementById('dealType').selectedIndex].text;
+        const selectedDiscoveries = shuffleArray(activeDiscoveries).slice(0, 4);
+        const selectedPointers = shuffleArray(activePointers).slice(0, 4);
+        const selectedLinkLeads = shuffleArray(activeLinkLeads).slice(0, 4);
 
-            let phase0 = `[MODE: ${modeText} | PRONOUNS: ${pronounText}]\n${rawText}`;
-            if (customLine) phase0 += `\n[Custom Injection: ${customLine}]`;
-            document.getElementById('out-phase0').innerText = phase0;
-            currentRawOutput = `=== PHASE 0: TARGET LOCK ===\n${phase0}\n\n`;
+        const titleSeparators = [" -- ", " - ", " | ", " ~ ", " // ", " ✨ ", " 👉 ", " : "];
+        const runConnectors = ["with this", "using this", "thanks to this", "grabbing this", "via this"];
+        const retPrefixes = [`On ${retailer},`, `At ${retailer},`, `Over at ${retailer},`, `Checking ${retailer},`];
+        const retSuffixes = [`on ${retailer}!`, `at ${retailer}!`, `via ${retailer}!`, `from ${retailer}!`];
+        
+        const wrapRegPrice = (text) => {
+            const styles = [`(${text})`, `[${text}]`, `- ${text}`, `~${text}~`];
+            return styles[Math.floor(Math.random() * styles.length)];
+        };
 
-            let sl = [];
+        function injectEmojisV8(linesArray, min, max) {
+            let count = 0;
+            let result = [];
+            for (let i = 0; i < linesArray.length; i++) {
+                let line = linesArray[i];
+                let linesLeft = linesArray.length - 1 - i;
+                let needed = min - count;
+                let opts = [];
+                if (count < max) opts.push(1, 2); 
+                if (count <= max - 2) opts.push(3); 
+                if (count >= min || (linesLeft * 2 >= needed)) opts.push(0); 
+                if (needed > 0) {
+                    if (linesLeft * 2 === needed) opts = [3];
+                    else if (linesLeft === needed && count >= max) opts = [0]; 
+                    else if (linesLeft === needed) opts = (count <= max - 2) ? [1, 2, 3] : [1, 2];
+                }
+                if (count >= max) opts = [0];
+                let choice = opts[Math.floor(Math.random() * opts.length)];
+                
+                if (choice === 1) { line = `${getNextEmoji()} ${line}`; count++; }
+                else if (choice === 2) { line = `${line} ${getNextEmoji()}`; count++; }
+                else if (choice === 3) { line = `${getNextEmoji()} ${line} ${getNextEmoji()}`; count += 2; }
+                result.push(line);
+            }
+            return result;
+        }
+
+        const rLower = rawText.toLowerCase();
+        const isPickup = rLower.includes('pickup') || rLower.includes('pick up') || rLower.includes('walgreens') || rLower.includes('w@lgreens');
+        const dynamicStatuses = isPickup ? ["Pickup!", "In-store!", "Grab at store!", "Local pickup!"] : ["Shipped!", "To your door!", "Delivery included!", "On its way!"];
+
+        const isAsLowAs = rLower.includes('as low as') || rLower.includes('starting at') || rLower.includes('cheapest');
+        const selectedLowPrefixes = shuffleArray(["As low as", "Starting at", "From", "Dropping to"]).slice(0, 4);
+
+        const modeText = document.getElementById('dealType').options[document.getElementById('dealType').selectedIndex].text;
+
+        let phase0 = `[MODE: ${modeText} | PRONOUNS: ${pronounText}]\n${rawText}`;
+        if (customLine) phase0 += `\n[Custom Injection: ${customLine}]`;
+        document.getElementById('out-phase0').innerText = phase0;
+        currentRawOutput = `=== PHASE 0: TARGET LOCK ===\n${phase0}\n\n`;
+
+        let sl = [];
+        for(let i=0; i<3; i++) {
+            let priceDisplay = aiData.sale_price === "???" ? "???" : cleanText(aiData.sale_price);
+            let prefixToUse = isAsLowAs ? selectedLowPrefixes[i] : selectedPrefixes[i];
+            let hook = `${prefixToUse} ${priceDisplay.includes("???") ? priceDisplay : "$" + priceDisplay.replace('$', '')} ${dynamicStatuses[i]}`;
+            
+            if(aiData.reg_price !== "NONE") hook += ` ${wrapRegPrice(selectedCompLabels[i] + " " + cleanText(aiData.reg_price))}`;
+            
+            let flip = Math.random() > 0.5;
+            let sep = titleSeparators[Math.floor(Math.random() * titleSeparators.length)];
+            
+            sl.push(flip ? `${hook}${sep}${cleanTitle}` : `${cleanTitle}${sep}${hook}`);
+        }
+
+        let postOutputs = [];
+        let commentOutputs = [];
+
+        if (dealType === 'regular') {
             for(let i=0; i<3; i++) {
-                let priceDisplay = aiData.sale_price === "???" ? "???" : cleanText(aiData.sale_price);
+                let b2 = aiData.b2_strategies[i] !== "DEAD" ? `${cleanText(aiData.b2_strategies[i])}` : "";
+                let b5 = aiData.b5_perks && aiData.b5_perks[i] !== "DEAD" ? `${cleanText(aiData.b5_perks[i])} ` : "";
+                let b6 = aiData.b6_savings && aiData.b6_savings[i] !== "DEAD" ? `${cleanText(aiData.b6_savings[i])} ` : "";
+                let b7 = aiData.b7_occasions && aiData.b7_occasions[i] !== "DEAD" ? `${cleanText(aiData.b7_occasions[i])} ` : "";
+                let b8 = aiData.b8_overflow && aiData.b8_overflow[i] !== "DEAD" ? `${cleanText(aiData.b8_overflow[i])} ` : "";
+                let b9 = aiData.b9_overflow && aiData.b9_overflow[i] !== "DEAD" ? `${cleanText(aiData.b9_overflow[i])} ` : "";
                 
-                // Swap prefix if "As low as" is detected
-                let prefixToUse = isAsLowAs ? selectedLowPrefixes[i] : selectedPrefixes[i];
-                let hook = `${prefixToUse} ${priceDisplay.includes("???") ? priceDisplay : "$" + priceDisplay.replace('$', '')} ${dynamicStatuses[i]}`;
+                let bottomLine = `${b5}${b6}${b7}${b8}${b9}`.trim();
+                let inf = cleanText(aiData.inferences[i]);
                 
-                if(aiData.reg_price !== "NONE") hook += ` ${wrapRegPrice(selectedCompLabels[i] + " " + cleanText(aiData.reg_price))}`;
+                let flipB1 = Math.random() > 0.5;
+                let discText = selectedDiscoveries[i];
+                if (!discText.startsWith("I ")) {
+                    discText = discText.charAt(0).toLowerCase() + discText.slice(1);
+                }
                 
-                let flip = Math.random() > 0.5;
-                let sep = titleSeparators[Math.floor(Math.random() * titleSeparators.length)];
+                let rPref = retPrefixes[Math.floor(Math.random() * retPrefixes.length)];
+                let rSuff = retSuffixes[Math.floor(Math.random() * retSuffixes.length)];
+                let discLine = flipB1 ? `${selectedDiscoveries[i]} ${rSuff}` : `${rPref} ${discText}!`;
                 
-                sl.push(flip ? `${hook}${sep}${cleanTitle}` : `${cleanTitle}${sep}${hook}`);
-            }
-
-            let postOutputs = [];
-            let commentOutputs = [];
-
-            if (dealType === 'regular') {
-                // REGULAR DEAL ASSEMBLY
-                for(let i=0; i<3; i++) {
-                    let b2 = aiData.b2_strategies[i] !== "DEAD" ? `${cleanText(aiData.b2_strategies[i])}` : "";
-                    let b5 = aiData.b5_perks && aiData.b5_perks[i] !== "DEAD" ? `${cleanText(aiData.b5_perks[i])} ` : "";
-                    let b6 = aiData.b6_savings && aiData.b6_savings[i] !== "DEAD" ? `${cleanText(aiData.b6_savings[i])} ` : "";
-                    let b7 = aiData.b7_occasions && aiData.b7_occasions[i] !== "DEAD" ? `${cleanText(aiData.b7_occasions[i])} ` : "";
-                    let b8 = aiData.b8_overflow && aiData.b8_overflow[i] !== "DEAD" ? `${cleanText(aiData.b8_overflow[i])} ` : "";
-                    let b9 = aiData.b9_overflow && aiData.b9_overflow[i] !== "DEAD" ? `${cleanText(aiData.b9_overflow[i])} ` : "";
-                    
-                    let bottomLine = `${b5}${b6}${b7}${b8}${b9}`.trim();
-                    let inf = cleanText(aiData.inferences[i]);
-                    
-                    let flipB1 = Math.random() > 0.5;
-                    let discText = selectedDiscoveries[i];
-                    if (!discText.startsWith("I ")) {
-                        discText = discText.charAt(0).toLowerCase() + discText.slice(1);
-                    }
-                    
-                    let rPref = retPrefixes[Math.floor(Math.random() * retPrefixes.length)];
-                    let rSuff = retSuffixes[Math.floor(Math.random() * retSuffixes.length)];
-                    let discLine = flipB1 ? `${selectedDiscoveries[i]} ${rSuff}` : `${rPref} ${discText}!`;
-                    
-                    let ptrLine = selectedPointers[i];
-                    let rawLines = [];
-                    const shuffleType = (i + dealNum) % 3; 
-                    
-                    if(shuffleType === 0) { 
-                        rawLines.push(discLine, sl[i]);
-                        if(b2) rawLines.push(`${b2} ${ptrLine}`); else rawLines.push(ptrLine);
-                        rawLines.push(inf);
-                        if(bottomLine) rawLines.push(bottomLine);
-                    } else if (shuffleType === 1) { 
-                        rawLines.push(inf, sl[i], discLine);
-                        if(b2) rawLines.push(`${ptrLine} ${b2}`); else rawLines.push(ptrLine);
-                        if(bottomLine) rawLines.push(bottomLine);
-                    } else { 
-                        rawLines.push(sl[i], discLine);
-                        if(bottomLine) rawLines.push(`${inf} ${bottomLine}`); else rawLines.push(inf);
-                        if(b2) rawLines.push(b2);
-                        rawLines.push(ptrLine);
-                    }
-
-                    let customText = aiData.custom_line_rephrases && aiData.custom_line_rephrases[i] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[i]) : "";
-                    if (customText) {
-                        const randIdx = Math.floor(Math.random() * (rawLines.length + 1));
-                        rawLines.splice(randIdx, 0, customText);
-                    }
-
-                    let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
-                    let postText = joinWithSpaceChaos(emojifiedLines, 2, 4);
-                    
-                    postOutputs.push(postText);
-                    document.getElementById(`out-post${i+1}`).innerText = postText;
-                    document.getElementById(`out-post${i+1}`).setAttribute('data-raw', postText);
-                    currentRawOutput += `=== POST VARIATION ${i+1} ===\n${postText}\n\n`;
+                let ptrLine = selectedPointers[i];
+                let rawLines = [];
+                const shuffleType = (i + dealNum) % 3; 
+                
+                if(shuffleType === 0) { 
+                    rawLines.push(discLine, sl[i]);
+                    if(b2) rawLines.push(`${b2} ${ptrLine}`); else rawLines.push(ptrLine);
+                    rawLines.push(inf);
+                    if(bottomLine) rawLines.push(bottomLine);
+                } else if (shuffleType === 1) { 
+                    rawLines.push(inf, sl[i], discLine);
+                    if(b2) rawLines.push(`${ptrLine} ${b2}`); else rawLines.push(ptrLine);
+                    if(bottomLine) rawLines.push(bottomLine);
+                } else { 
+                    rawLines.push(sl[i], discLine);
+                    if(bottomLine) rawLines.push(`${inf} ${bottomLine}`); else rawLines.push(inf);
+                    if(b2) rawLines.push(b2);
+                    rawLines.push(ptrLine);
                 }
 
-                for(let i=0; i<3; i++) {
-                    let praise = cleanText(aiData.praises[i]);
-                    let disc = cleanText(aiData.disclaimers[i]);
-                    let linkLine = `${selectedLinkLeads[i]} ${extractedURL}`;
-
-                    let rawLines = [];
-                    const commentType = (i + dealNum) % 3;
-
-                    if(commentType === 0) { 
-                        rawLines.push(`${praise} ${linkLine} ${disc}`);
-                    } else if (commentType === 1) { 
-                        rawLines.push(praise, linkLine, disc);
-                    } else { 
-                        rawLines.push(linkLine, `${disc} ${praise}`);
-                    }
-                    
-                    let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
-                    
-                    let cText = "";
-                    if(commentType === 0) cText = emojifiedLines[0];
-                    else if (commentType === 1) cText = emojifiedLines.join("\n\n");
-                    else cText = emojifiedLines.join("\n\n");
-
-                    commentOutputs.push(cText);
-                    document.getElementById(`out-com${i+1}`).innerText = cText;
-                    document.getElementById(`out-com${i+1}`).setAttribute('data-raw', cText);
-                    currentRawOutput += `=== COMMENT ${i+1} ===\n${cText}\n\n`;
+                let customText = aiData.custom_line_rephrases && aiData.custom_line_rephrases[i] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[i]) : "";
+                if (customText) {
+                    const randIdx = Math.floor(Math.random() * (rawLines.length + 1));
+                    rawLines.splice(randIdx, 0, customText);
                 }
 
-            } else {
-                // RUN DEAL ASSEMBLY
-                for(let i=0; i<3; i++) {
-                    let hook = selectedHooks[i];
-                    let inf = cleanText(aiData.inferences[i]);
-                    let keyword = cleanText(aiData.scrubbed_keyword);
-                    let ptrLine = selectedShortPointers[i];
-                    
-                    let rConn = runConnectors[Math.floor(Math.random() * runConnectors.length)];
-                    let rawLines = [`${hook} ${inf} ${rConn} ${keyword}! ${ptrLine}`];
-                    
-                    let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
-                    let postText = emojifiedLines[0];
-                    
-                    postOutputs.push(postText);
-                    document.getElementById(`out-post${i+1}`).innerText = postText;
-                    document.getElementById(`out-post${i+1}`).setAttribute('data-raw', postText);
-                    currentRawOutput += `=== POST VARIATION ${i+1} ===\n${postText}\n\n`;
+                let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
+                let postText = joinWithSpaceChaos(emojifiedLines, 2, 4);
+                
+                postOutputs.push(postText);
+                document.getElementById(`out-post${i+1}`).innerText = postText;
+                document.getElementById(`out-post${i+1}`).setAttribute('data-raw', postText);
+                currentRawOutput += `=== POST VARIATION ${i+1} ===\n${postText}\n\n`;
+            }
+
+            for(let i=0; i<3; i++) {
+                let praise = cleanText(aiData.praises[i]);
+                let disc = cleanText(aiData.disclaimers[i]);
+                let linkLead = selectedLinkLeads[i];
+                
+                // V9.00 Comment Entropy Engine
+                let keepPraise = Math.random() > 0.2; // 80% chance to keep praise
+                let keepDisc = Math.random() > 0.15; // 85% chance to keep disclaimer
+                let keepLead = Math.random() > 0.2; // 80% chance to keep link lead phrase
+                
+                let finalLink = keepLead ? `${linkLead} ${extractedURL}` : extractedURL;
+
+                let rawLines = [];
+                if (keepPraise) rawLines.push(praise);
+                rawLines.push(finalLink);
+                if (keepDisc) rawLines.push(disc);
+                
+                // Randomly shuffle the order of the comment elements
+                rawLines = rawLines.sort(() => 0.5 - Math.random());
+                
+                let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
+                let cText = emojifiedLines.join("\n\n");
+
+                commentOutputs.push(cText);
+                document.getElementById(`out-com${i+1}`).innerText = cText;
+                document.getElementById(`out-com${i+1}`).setAttribute('data-raw', cText);
+                currentRawOutput += `=== COMMENT ${i+1} ===\n${cText}\n\n`;
+            }
+
+        } else {
+            // RUN DEAL ASSEMBLY
+            for(let i=0; i<3; i++) {
+                let hook = selectedHooks[i];
+                let inf = cleanText(aiData.inferences[i]);
+                let keyword = cleanText(aiData.scrubbed_keyword);
+                let ptrLine = selectedShortPointers[i];
+                
+                let rConn = runConnectors[Math.floor(Math.random() * runConnectors.length)];
+                let rawLines = [`${hook} ${inf} ${rConn} ${keyword}! ${ptrLine}`];
+                
+                let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
+                let postText = emojifiedLines[0];
+                
+                postOutputs.push(postText);
+                document.getElementById(`out-post${i+1}`).innerText = postText;
+                document.getElementById(`out-post${i+1}`).setAttribute('data-raw', postText);
+                currentRawOutput += `=== POST VARIATION ${i+1} ===\n${postText}\n\n`;
+            }
+
+            for(let i=0; i<3; i++) {
+                let praise = cleanText(aiData.praises[i]);
+                let disc = cleanText(aiData.disclaimers[i]);
+                let linkLead = selectedLinkLeads[i];
+                
+                let flipB1 = Math.random() > 0.5;
+                let discText = selectedDiscoveries[i];
+                if (!discText.startsWith("I ")) {
+                    discText = discText.charAt(0).toLowerCase() + discText.slice(1);
+                }
+                
+                let rPref = retPrefixes[Math.floor(Math.random() * retPrefixes.length)];
+                let rSuff = retSuffixes[Math.floor(Math.random() * retSuffixes.length)];
+                let discLine = flipB1 ? `${selectedDiscoveries[i]} ${rSuff}` : `${rPref} ${discText}!`;
+
+                let b2 = aiData.b2_strategies[i] !== "DEAD" ? `${cleanText(aiData.b2_strategies[i])}` : "";
+                let b5 = aiData.b5_perks && aiData.b5_perks[i] !== "DEAD" ? `${cleanText(aiData.b5_perks[i])} ` : "";
+                let b6 = aiData.b6_savings && aiData.b6_savings[i] !== "DEAD" ? `${cleanText(aiData.b6_savings[i])} ` : "";
+                let b7 = aiData.b7_occasions && aiData.b7_occasions[i] !== "DEAD" ? `${cleanText(aiData.b7_occasions[i])} ` : "";
+                let b8 = aiData.b8_overflow && aiData.b8_overflow[i] !== "DEAD" ? `${cleanText(aiData.b8_overflow[i])} ` : "";
+                let b9 = aiData.b9_overflow && aiData.b9_overflow[i] !== "DEAD" ? `${cleanText(aiData.b9_overflow[i])} ` : "";
+                
+                let bottomLine = `${b5}${b6}${b7}${b8}${b9}`.trim();
+
+                // V9.00 Comment Entropy Engine for Run Deals
+                let keepPraise = Math.random() > 0.2; 
+                let keepDisc = Math.random() > 0.15; 
+                let keepLead = Math.random() > 0.2; 
+                
+                let finalLink = keepLead ? `${linkLead} ${extractedURL}` : extractedURL;
+
+                let rawLines = [];
+                rawLines.push(discLine);
+                rawLines.push(sl[i]);
+                if (b2) rawLines.push(b2);
+                if (keepPraise) rawLines.push(praise);
+                rawLines.push(finalLink);
+                if (keepDisc) rawLines.push(disc);
+                if (bottomLine) rawLines.push(bottomLine);
+
+                let customText = aiData.custom_line_rephrases && aiData.custom_line_rephrases[i] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[i]) : "";
+                if (customText) {
+                    const randIdx = Math.floor(Math.random() * (rawLines.length + 1));
+                    rawLines.splice(randIdx, 0, customText);
                 }
 
-                for(let i=0; i<3; i++) {
-                    let praise = cleanText(aiData.praises[i]);
-                    let disc = cleanText(aiData.disclaimers[i]);
-                    let linkLine = `${selectedLinkLeads[i]} ${extractedURL}`;
-                    
-                    let flipB1 = Math.random() > 0.5;
-                    let discText = selectedDiscoveries[i];
-                    if (!discText.startsWith("I ")) {
-                        discText = discText.charAt(0).toLowerCase() + discText.slice(1);
-                    }
-                    
-                    let rPref = retPrefixes[Math.floor(Math.random() * retPrefixes.length)];
-                    let rSuff = retSuffixes[Math.floor(Math.random() * retSuffixes.length)];
-                    let discLine = flipB1 ? `${selectedDiscoveries[i]} ${rSuff}` : `${rPref} ${discText}!`;
+                let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
+                let cText = joinWithSpaceChaos(emojifiedLines, 2, 4);
 
-                    let b2 = aiData.b2_strategies[i] !== "DEAD" ? `${cleanText(aiData.b2_strategies[i])}` : "";
-                    let b5 = aiData.b5_perks && aiData.b5_perks[i] !== "DEAD" ? `${cleanText(aiData.b5_perks[i])} ` : "";
-                    let b6 = aiData.b6_savings && aiData.b6_savings[i] !== "DEAD" ? `${cleanText(aiData.b6_savings[i])} ` : "";
-                    let b7 = aiData.b7_occasions && aiData.b7_occasions[i] !== "DEAD" ? `${cleanText(aiData.b7_occasions[i])} ` : "";
-                    let b8 = aiData.b8_overflow && aiData.b8_overflow[i] !== "DEAD" ? `${cleanText(aiData.b8_overflow[i])} ` : "";
-                    let b9 = aiData.b9_overflow && aiData.b9_overflow[i] !== "DEAD" ? `${cleanText(aiData.b9_overflow[i])} ` : "";
-                    
-                    let bottomLine = `${b5}${b6}${b7}${b8}${b9}`.trim();
-
-                    let rawLines = [];
-                    
-                    const commentType = (i + dealNum) % 3;
-                    if(commentType === 0) { 
-                        rawLines.push(discLine);
-                        rawLines.push(sl[i]);
-                        if (b2) rawLines.push(b2);
-                        rawLines.push(praise);
-                        rawLines.push(linkLine);
-                        rawLines.push(disc);
-                        if (bottomLine) rawLines.push(bottomLine);
-                    } else if (commentType === 1) { 
-                        rawLines.push(praise);
-                        rawLines.push(linkLine);
-                        rawLines.push(disc);
-                        rawLines.push(discLine);
-                        rawLines.push(sl[i]);
-                        if (b2) rawLines.push(b2);
-                        if (bottomLine) rawLines.push(bottomLine);
-                    } else { 
-                        rawLines.push(linkLine);
-                        rawLines.push(`${disc} ${praise}`);
-                        rawLines.push(`${discLine} ${sl[i]}`);
-                        if (b2) rawLines.push(b2);
-                        if (bottomLine) rawLines.push(bottomLine);
-                    }
-
-                    let customText = aiData.custom_line_rephrases && aiData.custom_line_rephrases[i] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[i]) : "";
-                    if (customText) {
-                        const randIdx = Math.floor(Math.random() * (rawLines.length + 1));
-                        rawLines.splice(randIdx, 0, customText);
-                    }
-
-                    let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
-                    let cText = joinWithSpaceChaos(emojifiedLines, 2, 4);
-
-                    commentOutputs.push(cText);
-                    document.getElementById(`out-com${i+1}`).innerText = cText;
-                    document.getElementById(`out-com${i+1}`).setAttribute('data-raw', cText);
-                    currentRawOutput += `=== COMMENT ${i+1} ===\n${cText}\n\n`;
-                }
+                commentOutputs.push(cText);
+                document.getElementById(`out-com${i+1}`).innerText = cText;
+                document.getElementById(`out-com${i+1}`).setAttribute('data-raw', cText);
+                currentRawOutput += `=== COMMENT ${i+1} ===\n${cText}\n\n`;
             }
+        }
 
-            // DAILY THREAD ASSEMBLY (Universal)
-            let priceDisplayDT = aiData.sale_price === "???" ? "???" : cleanText(aiData.sale_price);
-            let dtSep = titleSeparators[Math.floor(Math.random() * titleSeparators.length)];
-            let dtRet = `on ${retailer}`;
-            
-            // Swap prefix for Daily Thread
-            let dtPrefix = isAsLowAs ? selectedLowPrefixes[3] : selectedPrefixes[3];
-            let dtHook = `${dtPrefix} ${priceDisplayDT.includes("???") ? priceDisplayDT : "$" + priceDisplayDT.replace('$', '')} ${dynamicStatuses[3]}`;
-            
-            if(aiData.reg_price !== "NONE") dtHook += ` ${wrapRegPrice(selectedCompLabels[3] + " " + cleanText(aiData.reg_price))}`;
-            
-            let dtHeader = isOdd ? `${dtHook} ${dtRet}${dtSep}${cleanTitle}` : `${cleanTitle}${dtSep}${dtHook} ${dtRet}`;
-            
-            let dtB2 = aiData.b2_strategies[3] !== "DEAD" ? cleanText(aiData.b2_strategies[3]) : "";
-            let dtB5 = aiData.b5_perks && aiData.b5_perks[3] !== "DEAD" ? `${cleanText(aiData.b5_perks[3])} ` : "";
-            let dtB6 = aiData.b6_savings && aiData.b6_savings[3] !== "DEAD" ? `${cleanText(aiData.b6_savings[3])} ` : "";
-            let dtB7 = aiData.b7_occasions && aiData.b7_occasions[3] !== "DEAD" ? `${cleanText(aiData.b7_occasions[3])} ` : "";
-            let dtB8 = aiData.b8_overflow && aiData.b8_overflow[3] !== "DEAD" ? `${cleanText(aiData.b8_overflow[3])} ` : "";
-            let dtB9 = aiData.b9_overflow && aiData.b9_overflow[3] !== "DEAD" ? `${cleanText(aiData.b9_overflow[3])} ` : "";
-            
-            let dtOverflow = `${dtB5}${dtB6}${dtB7}${dtB8}${dtB9}`.trim();
+        // DAILY THREAD ASSEMBLY (Universal)
+        let priceDisplayDT = aiData.sale_price === "???" ? "???" : cleanText(aiData.sale_price);
+        let dtSep = titleSeparators[Math.floor(Math.random() * titleSeparators.length)];
+        let dtRet = `on ${retailer}`;
+        
+        let dtPrefix = isAsLowAs ? selectedLowPrefixes[3] : selectedPrefixes[3];
+        let dtHook = `${dtPrefix} ${priceDisplayDT.includes("???") ? priceDisplayDT : "$" + priceDisplayDT.replace('$', '')} ${dynamicStatuses[3]}`;
+        
+        if(aiData.reg_price !== "NONE") dtHook += ` ${wrapRegPrice(selectedCompLabels[3] + " " + cleanText(aiData.reg_price))}`;
+        
+        let dtHeader = isOdd ? `${dtHook} ${dtRet}${dtSep}${cleanTitle}` : `${cleanTitle}${dtSep}${dtHook} ${dtRet}`;
+        
+        let dtB2 = aiData.b2_strategies[3] !== "DEAD" ? cleanText(aiData.b2_strategies[3]) : "";
+        let dtB5 = aiData.b5_perks && aiData.b5_perks[3] !== "DEAD" ? `${cleanText(aiData.b5_perks[3])} ` : "";
+        let dtB6 = aiData.b6_savings && aiData.b6_savings[3] !== "DEAD" ? `${cleanText(aiData.b6_savings[3])} ` : "";
+        let dtB7 = aiData.b7_occasions && aiData.b7_occasions[3] !== "DEAD" ? `${cleanText(aiData.b7_occasions[3])} ` : "";
+        let dtB8 = aiData.b8_overflow && aiData.b8_overflow[3] !== "DEAD" ? `${cleanText(aiData.b8_overflow[3])} ` : "";
+        let dtB9 = aiData.b9_overflow && aiData.b9_overflow[3] !== "DEAD" ? `${cleanText(aiData.b9_overflow[3])} ` : "";
+        
+        let dtOverflow = `${dtB5}${dtB6}${dtB7}${dtB8}${dtB9}`.trim();
 
-            let rawDtLines = [];
-            if(isOdd) {
-                rawDtLines.push(dtHeader, `Check it out right here: ${extractedURL}`, dtSignoff);
-                if(dtB2) rawDtLines.push(dtB2);
-                if(dtOverflow) rawDtLines.push(dtOverflow);
-            } else {
-                rawDtLines.push(dtSignoff, dtHeader, `Check it out right here: ${extractedURL}`);
-                if(dtB2) rawDtLines.push(dtB2);
-                if(dtOverflow) rawDtLines.push(dtOverflow);
-            }
+        let rawDtLines = [];
+        if(isOdd) {
+            rawDtLines.push(dtHeader, `Check it out right here: ${extractedURL}`, dtSignoff);
+        } else {
+            rawDtLines.push(dtSignoff, dtHeader, `Check it out right here: ${extractedURL}`);
+        }
+        
+        // V9.00 Floating Daily Thread B2/B8
+        if(dtB2) rawDtLines.splice(Math.floor(Math.random() * (rawDtLines.length + 1)), 0, dtB2);
+        if(dtOverflow) rawDtLines.splice(Math.floor(Math.random() * (rawDtLines.length + 1)), 0, dtOverflow);
 
-            let customTextDT = aiData.custom_line_rephrases && aiData.custom_line_rephrases[3] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[3]) : "";
-            if (customTextDT) {
-                const randIdxDT = Math.floor(Math.random() * (rawDtLines.length + 1));
-                rawDtLines.splice(randIdxDT, 0, customTextDT);
-            }
+        let customTextDT = aiData.custom_line_rephrases && aiData.custom_line_rephrases[3] !== "DEAD" ? cleanText(aiData.custom_line_rephrases[3]) : "";
+        if (customTextDT) {
+            const randIdxDT = Math.floor(Math.random() * (rawDtLines.length + 1));
+            rawDtLines.splice(randIdxDT, 0, customTextDT);
+        }
 
-            let emojifiedDtLines = injectEmojisV8(rawDtLines, 3, 5);
-            let dtText = joinWithSpaceChaos(emojifiedDtLines, 2, 4);
+        let emojifiedDtLines = injectEmojisV8(rawDtLines, 3, 5);
+        let dtText = joinWithSpaceChaos(emojifiedDtLines, 2, 4);
 
-            document.getElementById('out-dt').innerText = dtText;
-            document.getElementById('out-dt').setAttribute('data-raw', dtText);
-            currentRawOutput += `=== DAILY THREAD COMMENT ===\n${dtText}`;
+        document.getElementById('out-dt').innerText = dtText;
+        document.getElementById('out-dt').setAttribute('data-raw', dtText);
+        currentRawOutput += `=== DAILY THREAD COMMENT ===\n${dtText}`;
 
+        // Only push to history if this is a fresh generation (not a shuffle)
+        if (!document.getElementById('shuffleButton').style.display || document.getElementById('shuffleButton').style.display === "none") {
             dealCount++;
             const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
             
@@ -967,18 +981,9 @@ GLOBAL SHIELD: You are STRICTLY FORBIDDEN from using any of these banned words: 
             historyLog.innerHTML = historyCard + historyLog.innerHTML;
             document.getElementById('sessionBaseHeader').innerText = `📚 SESSION BASE (${dealCount} / 14)`;
 
-            if(dealNum < 7) dealNumInput.value = dealNum + 1;
-            else dealNumInput.value = 1;
+            if(dealNum < 7) document.getElementById('dealNumber').value = dealNum + 1;
+            else document.getElementById('dealNumber').value = 1;
             updateButtonText();
-
-            document.getElementById('rawText').value = "";
-            document.getElementById('customLine').value = "";
-
-        } catch (error) {
-            alert("Error: " + error.message);
-        } finally {
-            updateButtonText();
-            btn.disabled = false;
         }
     }
 
