@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Deal Generator v9.6.80</title>
+    <title>The CB Deal Generator v9.7.18</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -120,6 +121,18 @@
                     <input type="hidden" id="dealType" value="regular">
                 </div>
                 <div class="col">
+                    <label>🚚 Fulfillment Style</label>
+                    <select id="fulfillmentStyle" onchange="updateFulfillmentHelper()">
+                        <option value="auto" selected>Auto-Detect (Default)</option>
+                        <option value="shipped">Force: Shipped</option>
+                        <option value="pickup">Force: Pickup / In-Store</option>
+                        <option value="conditional">Force: Conditional / Digital</option>
+                    </select>
+                    <div id="fulfillmentHelper" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.2;">
+                        <i>Smart Auto: Scans text for 'pickup' or '$35' automatically.</i>
+                    </div>
+                </div>
+                <div class="col">
                     <label>📅 Day of Week Reference</label>
                     <select id="currentDay">
                         <option value="Monday">Monday</option>
@@ -131,19 +144,19 @@
                         <option value="Sunday">Sunday</option>
                     </select>
                 </div>
+            </div>
+            <div class="row" style="margin-top: 10px;">
                 <div class="col">
                     <label style="display: flex; justify-content: space-between; align-items: center;">
                         ✨ Primary AI Model 
                         <span style="cursor:pointer; font-size: 14px;" onclick="fetchLiveModels()" title="Fetch latest models from Google">🔄 Refresh</span>
                     </label>
                     <select id="aiModel">
-                        <option value="gemini-2.0-flash" selected>gemini-2.0-flash (Best for Complex Logic / Fastest)</option>
+                        <option value="gemini-flash-lite-latest">gemini-flash-lite-latest (Defaulting...)</option>
+                        <option value="gemini-2.0-flash">gemini-2.0-flash (Best for Complex Logic / Fastest)</option>
                         <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (Stable)</option>
-                        <option value="gemini-flash-lite-latest">gemini-flash-lite-latest (Basic / May run slow)</option>
                     </select>
                 </div>
-            </div>
-            <div class="row" style="margin-top: 10px;">
                 <div class="col">
                     <label>🔢 Cycle Deal Sequence #</label>
                     <select id="dealNumber" onchange="updateButtonText()">
@@ -179,7 +192,7 @@
 
     <div class="right-col">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; margin-top: -30px;">
-            <span class="version-tag">v9.6.80</span>
+            <span class="version-tag">v9.7.18</span>
         </div>
         <div class="card">
             <div class="card-header" id="sessionBaseHeaderContainer">
@@ -313,10 +326,12 @@
             
             select.innerHTML = ''; 
             
+            // V9.6.98: Strict Model Filtering (BANS PRO MODELS COMPLETELY)
             const textModels = data.models.filter(m => 
                 m.supportedGenerationMethods.includes("generateContent") && 
                 m.name.includes("gemini") &&
-                (m.name.includes("flash") || m.name.includes("pro") || m.name.includes("lite")) && 
+                (m.name.includes("flash") || m.name.includes("lite")) && 
+                !m.name.includes("pro") && // ABSOLUTE BAN ON PRO MODELS
                 !m.name.includes("vision") &&
                 !m.name.includes("tts") &&
                 !m.name.includes("image") &&
@@ -330,6 +345,7 @@
             textModels.sort((a, b) => b.name.localeCompare(a.name));
 
             let liteModels = [];
+            let flashModels = [];
 
             textModels.forEach(m => {
                 const modelId = m.name.replace('models/', '');
@@ -338,17 +354,22 @@
                 opt.text = `${modelId} ${m.version ? '(v' + m.version + ')' : ''}`;
                 select.appendChild(opt);
 
-                // Collect all numbered 'lite' models (ignore omni, pro, and latest)
-                if (modelId.includes('flash') && modelId.includes('lite') && !modelId.includes('omni') && !modelId.includes('latest')) {
+                if (modelId.includes('lite')) {
                     liteModels.push(modelId);
+                } else if (modelId.includes('flash')) {
+                    flashModels.push(modelId);
                 }
             });
             
-            // Smart Selection: Pick the "N-1" model (the second newest) for maximum stability.
+            // V9.6.98 SMART SELECTION: 1st Priority = Lite (2nd Newest), 2nd Priority = Flash (2nd Newest)
             if (liteModels.length > 1) {
-                select.value = liteModels[1]; // Grabs the second item in the sorted list
+                select.value = liteModels[1]; // Grabs the 2nd newest Lite model
             } else if (liteModels.length === 1) {
-                select.value = liteModels[0]; // Fallback if only one exists
+                select.value = liteModels[0]; 
+            } else if (flashModels.length > 1) {
+                select.value = flashModels[1]; // Fallback: Grabs the 2nd newest Flash model
+            } else if (flashModels.length === 1) {
+                select.value = flashModels[0];
             } else if (textModels.length > 0) {
                 select.value = textModels[0].name.replace('models/', ''); // Ultimate fallback
             }
@@ -454,17 +475,19 @@
         return str.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{238C}\u{2B06}\u{2B05}\u{2B07}\u{2B1B}\u{2B1C}\u{2B50}\u{2B55}\u{231A}\u{231B}\u{2328}\u{23F0}\u{23F3}\u{23E9}-\u{23EC}\u{25FD}\u{25FE}\u{25AA}\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{200D}\u{FE0F}\u{2640}\u{2642}\u{1F4A8}]/gu, '').trim();
     }
 
+    // V9.7.15 URL EXTRACTION LOCK: Ignores trailing punctuation to prevent broken links
     function extractURL(text) {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        // Regex looks for URL but explicitly excludes trailing punctuation (.,;:?!"')
+        const urlRegex = /(https?:\/\/[^\s]+[^.,;:?!"'\s\)])/g;
         const match = text.match(urlRegex);
         return match ? match[0] : "https://thecouponboutique.com/";
     }
     
-    // V9.6.80 URL CLOAKING ENGINE: Zero-English Hashing & Trailing Slash Eradication
+    // V9.7.15 URL CLOAKING ENGINE: Zero-English Hashing & Trailing Slash Eradication
     function cloakURL(baseURL) {
         if (!baseURL || baseURL === "https://thecouponboutique.com/") return baseURL;
         
-        // V9.6.80 FIX: Aggressively strip trailing slashes to prevent Facebook Open Graph preview failures
+        // V9.7.15 FIX: Aggressively strip trailing slashes to prevent Facebook Open Graph preview failures
         let cleanURL = baseURL.trim();
         if (cleanURL.endsWith('/')) {
             cleanURL = cleanURL.slice(0, -1);
@@ -474,7 +497,8 @@
         const keys = ['ref', 'src', 'id', 'v', 'idx', 'req', 's', 'ts', 'uid', 'var', 'node'];
         
         // Generate a random 4-character alphanumeric hash (e.g., 'a7b9', 'x3k8')
-        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        // V9.7.15 VOWEL ERADICATION: Mathematically impossible to spell banned English words
+        const chars = 'bcdfghjklmnpqrstvwxyz0123456789';
         let randomHash = '';
         for (let i = 0; i < 4; i++) {
             randomHash += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -566,46 +590,47 @@
 
         if (dealType === 'regular') {
             prompt = `Analyze this deal: "${rawText}"
-Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings. JSON STRICT MODE: You MUST ensure perfect JSON syntax. Escape all internal double quotes (e.g., \") and ensure all array elements are separated by commas.
+Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings. JSON STRICT MODE: You MUST ensure perfect JSON syntax. Escape all internal double quotes (e.g., \"). TRAILING COMMA BAN: You are STRICTLY FORBIDDEN from leaving a trailing comma at the end of an array or object (e.g., ["a", "b",] is illegal).
 "retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart", "Amazon Haul", "Target". Fix leetspeak like W@lm@rt. You MUST capture multi-word retailers exactly as written. Do NOT truncate them.),
 "cleaned_title": (String. Copy the primary product name line exactly as written. Remove emojis. LINE BOUNDARY LOCK: You MUST stop extracting at the end of the product name line. You are STRICTLY FORBIDDEN from merging multiple lines together or appending features from other lines into the title. The title MUST be exactly one line of text. VERBATIM OVERRIDE: If the product line contains 'ADD', 'BUY', or 'QTY' (e.g., 'ADD 3 QTY Coca-Cola'), you MUST keep those exact words in the title. Do NOT strip them out to 'clean' the name.),
 "sale_price": (String. Scan the ENTIRE raw text to extract the sale price. EXACT NUMBER LOCK: You MUST extract ONLY the numbers and $ signs. You are STRICTLY FORBIDDEN from extracting words like 'As low as', 'Starting at', or 'Cheapest'. You are STRICTLY FORBIDDEN from extracting the regular price here. HYPHEN LOCK: If the sale price is a range (e.g., '$17.99 - $20.51'), you MUST extract the entire range exactly as written. MISSING PRICE LOCK: If there is NO price in the raw text, write "???". Do NOT hallucinate a price.),
 "reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". Do NOT mash the numbers together. HYPHEN LOCK: If the price is a range (e.g., '$3.67 - $5.81'), you MUST keep the hyphen exactly as written (e.g., '3 67 - 5 81'). If none, write "NONE"),
 "praises": (Array of 3 short hype phrases. PRONOUN ENFORCEMENT: ${pronounInstruction} FORMAT MIXER: You MUST randomly mix between asking a deep, open-ended question AND making a highly positive statement. 5-WORD RULE: Your questions MUST force the reader to type a long explanation (e.g., 'What would you use this for in your house?', 'How would you style this for the weekend?'). You are STRICTLY FORBIDDEN from asking questions that can be answered with 'Me', 'Yes', or 'I do'. AUTHENTICITY LOCK: Both the questions and the statements MUST be framed in a positive, upbeat way, BUT they must sound grounded and authentic. You are STRICTLY FORBIDDEN from using exaggerated, infomercial-style claims (e.g., do NOT say 'This is the absolute best thing ever!'). Sound like a real person giving a genuine recommendation. SURVEY BAN: Do NOT sound like a corporate brand survey. ANTI-PARROT LOCK: You MUST invent phrases highly specific to the product. You are STRICTLY FORBIDDEN from copying the examples provided in this prompt. You are STRICTLY FORBIDDEN from asking 'Yes/No' questions.),
-"inferences": (Array of 3 short lifestyle statements. TESTIMONIAL HIJACK: ONLY if the raw text contains a personal review, rephrase it. Otherwise, invent a standard statement. PRONOUN ENFORCEMENT: ${pronounInstruction} You MUST obey the pronoun rule above all else. LAZY HUMAN TEXTING: Write like a real person texting a friend. CREATIVE VARIANCE: You MUST invent highly specific, vivid, and distinct use-cases for each of the 3 sentences. PRIVATE VELOCITY: For at least ONE of the sentences, frame the use-case around sending or gifting it to a friend/family member. Do NOT use the banned words 'share' or 'tag'. FORUM SEO MANDATE: For at least ONE of the sentences, you MUST naturally weave in the generic product category (e.g., 'reading pillow', 'summer outfit', 'bug spray') so the post can be indexed by search algorithms. TITLE ECHO BAN: You are STRICTLY FORBIDDEN from repeating the exact product name, brand, or pluralized versions of title words (e.g., if the title says 'Sprayer', do NOT say 'sprayers'). You MUST use natural, everyday nouns. You are STRICTLY FORBIDDEN from using clinical or robotic terms like 'clearing agent', 'solution', or 'apparatus'. AI WORD BAN: You are STRICTLY FORBIDDEN from using AI corporate-speak or LLM filler words like 'elevate', 'transform', 'seamless', 'companion', 'ideal', 'provides', 'ensures', 'perfect addition', 'game-changer', 'oasis', 'ultimate', 'a breeze', 'essential', 'must-have', 'look no further', 'testament', 'delve', or 'upgrade your'. AMAZON SPEC BAN: You are STRICTLY FORBIDDEN from listing product features. DATA BLEED BAN: You are STRICTLY FORBIDDEN from pulling specific colors, sizes, limits, accessories, or prices into these lifestyle statements.),
-"disclaimers": (Array of 3 casual warnings. SCARCITY BAN: You are STRICTLY FORBIDDEN from mentioning inventory, stock, shelves, items selling out, 'quantity on hand', or 'count'. Focus ONLY on the dollar amount fluctuating. B2 LEAK BAN: Do NOT put limits, minimums, or quantity rules here.),
+"inferences": (Array of exactly 3 short lifestyle statements. JSON SYNTAX LOCK: You are STRICTLY FORBIDDEN from leaving a trailing comma after the 3rd string in this array. TESTIMONIAL HIJACK: ONLY if the raw text contains a personal review, rephrase it. Otherwise, invent a standard statement. PRONOUN ENFORCEMENT: ${pronounInstruction} You MUST obey the pronoun rule above all else. POSITIVE GROUP-CHAT VIBE: Write like an excited shopper texting a friend about a great find. Focus entirely on positive satisfaction, cozy delight, or everyday relief. MASSIVE 40+ SLANG LEXICON: You MUST naturally weave casual text-speak into at least one sentence. You MUST rotate randomly across these 4 distinct categories to prevent repetition: 1) Starters: 'ngl', 'tbh', 'tbf', 'imo', 'omg', 'btw', 'fyi', 'no lie', 'fr', 'hands down'. 2) Modifiers: 'lowkey', 'highkey', 'literally', 'honestly', 'seriously', 'super', 'insanely', 'kinda', 'sorta', 'majorly', 'straight up', 'beyond', 'legit'. 3) Trailing: 'rn', 'lol', 'haha', 'probs', 'obv', 'bc', 'iykyk', '10/10'. 4) Shopper Idioms: 'obsessed with', 'swear by this', 'cannot get over how', 'living for this'. ANTI-PARROT LOCK: You are STRICTLY FORBIDDEN from overusing 'tbh' or 'rn'. You MUST use a different category and word across each string. CREATIVE VARIANCE: You MUST invent highly specific, vivid, and distinct use-cases for each of the 3 sentences. PRIVATE VELOCITY: For at least ONE of the sentences, frame the use-case around sending or gifting it to a friend/family member. Do NOT use the banned words 'share' or 'tag'. FORUM SEO MANDATE: For at least ONE of the sentences, you MUST naturally weave in the generic product category (e.g., 'reading pillow', 'summer outfit', 'bug spray') so the post can be indexed by search algorithms. TITLE ECHO BAN: You are STRICTLY FORBIDDEN from repeating the exact product name, brand, distinct title words, or specific clothing styles from the title (e.g., if the title says 'Turtleneck', do NOT say 'turtleneck'; if it says 'Knit Top and Casual Pant', do NOT say 'knit top and pant'). You MUST use broad, generic category nouns (e.g., 'matching set', 'loungewear', 'outfit', 'layering piece', 'basic top'). AI WORD BAN: You are STRICTLY FORBIDDEN from using AI corporate-speak or LLM filler words like 'elevate', 'transform', 'seamless', 'companion', 'ideal', 'provides', 'ensures', 'perfect addition', 'game-changer', 'game changer', 'oasis', 'ultimate', 'a breeze', 'essential', 'must-have', 'look no further', 'testament', 'delve', or 'upgrade your'. AMAZON SPEC BAN: You are STRICTLY FORBIDDEN from listing product features. DATA BLEED BAN: You are STRICTLY FORBIDDEN from pulling specific colors, sizes, limits, accessories, or prices into these lifestyle statements.),
+"disclaimers": (Array of 3 casual warnings. SCARCITY BAN: You are STRICTLY FORBIDDEN from mentioning inventory, stock, shelves, items selling out, 'quantity on hand', or 'count'. COMMERCIAL BAN (ABSOLUTE): You are STRICTLY FORBIDDEN from using the words 'price', 'cost', 'checkout', 'cart', 'order', 'buy', or 'purchase'. Focus ONLY on the 'dollar amount' or 'total' fluctuating naturally on the page (e.g., 'The total can shift at any moment', 'The dollar amount fluctuates throughout the day'). Do NOT mention the buying process. B2 LEAK BAN: Do NOT put limits, minimums, or quantity rules here.),
 "b2_verification": (JSON Object. You MUST extract facts from the extra text and place them into these exact keys. If a fact does not exist, write "NONE".
   "limit": (String. MUST contain 'Limit', 'Max', or 'Maximum' plus a number. Overrides 'qty'. NEVER extract colors here.),
   "quantity": (String. e.g., 'Add 3'. Do NOT extract limits here.),
-  "variant": (String. Extract the ENTIRE phrase after 'works on', 'cheaper', or 'cheapest'. Include hyphens, numbers, commas, and parentheses. VERBATIM MANDATE: You MUST extract the exact characters the user typed (e.g., if they type 'option A--Nude Brown', extract exactly 'option A--Nude Brown'). Do NOT autocorrect or delete 'messy' prefixes. ONLY PRESERVATION: If the word 'only' appears immediately before the trigger word (e.g., 'only works on'), you MUST include 'only' in your extracted string so the warning system catches it.),
+  "variant": (String. Extract the ENTIRE phrase after 'works on', 'cheaper', 'cheapest', or 'option for'. S&S FIREWALL (ABSOLUTE): If the extracted phrase contains the letters 'S&S', the word 'Subscribe', or the word 'Accounts' anywhere inside it, you MUST instantly delete it and write "NONE" for this key. It belongs exclusively to B8. NO-TRIGGER EXPANSION: If an extra line simply lists specific colors, models, or styles without a trigger word (e.g., 'colors blue or grey', 'in pink', 'Black/Silver'), you MUST extract the variant here. Include hyphens, numbers, commas, and parentheses. VERBATIM MANDATE: You MUST extract the exact characters the user typed. Do NOT autocorrect or delete 'messy' prefixes. ONLY PRESERVATION: If the word 'only' appears immediately before the trigger word (e.g., 'only works on'), you MUST include 'only' in your extracted string so the warning system catches it.),
   "size": (String. Extract the ENTIRE size phrase, e.g., 'S-XXL', 'up to 4X-Large'. LITERAL MATCH MANDATE: You MUST extract the exact numbers/letters the user typed (e.g., if they type '5X', extract '5X'). Do NOT autocorrect or change the sizes. Strip the word 'size'. TITLE BAN: You are STRICTLY FORBIDDEN from extracting sizes, dimensions, capacities, weights, or fluid measurements (e.g., '14x10 Inch', '144 Total Pieces', '18 oz', '5 lb') if they are already in the product title. ONLY extract sizes from the extra text. Do NOT extract generic phrases like 'select size' here.),
   "generic": (String. e.g., 'several colors', 'several color', 'all colors', 'all color', 'any color', 'select color', 'select option', 'select color and size', 'select size'. You MUST extract these even if there is no trigger word next to them.),
   "math": (String. Extract per-item math, e.g., '$16.88 per jug'. You MUST extract the exact number, even if it has more than two decimal places.)
 COMMA SPLIT MANDATE: If a line contains a color/variant AND a size separated by a comma (e.g., 'Several colors, S - XXL', 'Black, Medium'), you MUST split the line and place each fact into its correct JSON key. VARIANT COMMA EXCEPTION: If the comma separates a variant and a bundle/quantity (e.g., 'option Silver, 3packs'), do NOT split it. Extract the entire phrase into the "variant" key.
 CLEANING: You are STRICTLY FORBIDDEN from cleaning or altering the "variant" string. It must remain verbatim. For "size" and "generic" keys only: If the word 'size' is at the END of a phrase (e.g., 'Medium size'), strip it. Do NOT strip 'size' if it is at the beginning (e.g., 'size 10').
-FIREWALLS: Ignore 'S&S', 'Subscribe', 'Accounts', 'Shipped', 'Free Shipping'. S&S FIREWALL: If the trigger words 'cheaper' or 'works on' are attached to 'S&S' or 'Accounts' (e.g., 'cheaper under S&S'), you are STRICTLY FORBIDDEN from extracting it as a variant. It belongs exclusively to B8. TITLE BLINDNESS: Do NOT extract anything already in the product title, EXCEPT for explicit cart quantities (e.g., 'ADD 2 QTY'). You are STRICTLY FORBIDDEN from extracting sizes, colors, or variants (e.g., '17.25 Inch', 'Pack of 3') if they ONLY exist in the title line. VARIANT EXCEPTION: If a variant phrase in the extra text shares words with the title (e.g., 'pink 36 pcs', 'Silver, 3packs'), you MUST extract the ENTIRE phrase. Do NOT delete words from the variant just because they are in the title. If none, write "NONE"),
+FIREWALLS: Ignore 'S&S', 'Subscribe', 'Accounts', 'Shipped', 'Free Shipping'. TITLE BLINDNESS: Do NOT extract anything already in the product title, EXCEPT for explicit cart quantities (e.g., 'ADD 2 QTY'). You are STRICTLY FORBIDDEN from extracting sizes, colors, or variants (e.g., '17.25 Inch', 'Pack of 3') if they ONLY exist in the title line. VARIANT EXCEPTION: If a variant phrase in the extra text shares words with the title (e.g., 'pink 36 pcs', 'Silver, 3packs'), you MUST extract the ENTIRE phrase. Do NOT delete words from the variant just because they are in the title. If none, write "NONE"),
 "b2_strategies": (Array of 4 strings. DEPENDENCY LOCK: If all keys in b2_verification are "NONE", write ["DEAD","DEAD","DEAD","DEAD"].
 - UNIVERSAL INJECTION: You MUST generate exactly 4 strings. EVERY SINGLE STRING in this array MUST contain the exact same facts from the b2_verification JSON object. You are STRICTLY FORBIDDEN from leaving strings 2, 3, or 4 empty. Do NOT drop facts across the 4 posts.
-- VARIANCE MANDATE: You MUST use a DIFFERENT starting verb (Grab, Choose, Pick, Select) for each of the 4 strings. You are STRICTLY FORBIDDEN from copy-pasting the exact same sentence 4 times.
+- VARIANCE MANDATE: When using Structure 1 or 2, you MUST use a DIFFERENT starting verb (Grab, Choose, Pick, Select). (If using Structure 3 Conversational, you are STRICTLY FORBIDDEN from adding a starting verb to the sentence). You are STRICTLY FORBIDDEN from copy-pasting the exact same sentence 4 times.
 - EMPTY BUCKET MANDATE: If a key in b2_verification is "NONE", do NOT generate text for it. ONLY write sentences for active keys.
-- RULE 1 (LIMITS): ONLY use this if the fact contains 'Limit' or 'Max'. Rotate: "Please note, there is a strict limit of [X]!", "Keep in mind you can only get [X]!", "Just a reminder, these are limited to [X]!". You MUST apply this to ALL 4 STRINGS.
+- RULE 1 (LIMITS): ONLY use this if the fact contains 'Limit' or 'Max'. ACRONYM SCRUB: You are STRICTLY FORBIDDEN from printing the letters 'QTY'. Strip them out so only the clean number prints (e.g., 'limit of 5'). You MUST map these exact templates to the 4 strings: String 1: "Please note, there is a strict limit of [X]!" String 2: "Keep in mind you can only get [X]!" String 3: "Just a reminder, these are limited to [X]!" String 4: "Just letting you know there is a limit of [X]!". (ANTI-PARROT LOCK: You are STRICTLY FORBIDDEN from copy-pasting the same template across strings).
 - RULE 2 (QUANTITIES): ONLY if "quantity" is active. IF "math" is ALSO active, write: "You need to add [X] of these, making them just [Math]!". IF "math" is "NONE", write: "You need to add [X] of these!". You MUST apply this to ALL 4 STRINGS. ACRONYM SCRUB: You are STRICTLY FORBIDDEN from printing the letters 'QTY'. Strip them out.
 - RULE 3 (VARIANTS/OPTIONS): ONLY IF a variant, generic, or size is active, you MUST write EXACTLY ONE sentence combining them. NEVER write two separate sentences. You MUST apply this to ALL 4 strings in this array.
   * ONLY WARNING: Evaluate the extracted variant string. IF AND ONLY IF the literal word 'only' is present, you MUST map these exact templates to the 4 strings: String 1: "Heads up, this only works on the [Variant] option!" String 2: "I noticed this is only for the [Variant]!" String 3: "Make sure to grab the [Variant] since it's the only one working!" String 4: "This one is only for the [Variant] option!". (Strip the word 'only' from the variant first. STUTTER LOCK: If the variant already contains the word 'option', drop the appended word 'option' from the template). IF the word 'only' is NOT present, you are STRICTLY FORBIDDEN from using these templates and MUST proceed to STRUCTURAL CHAOS.
   * STRUCTURAL CHAOS: For all other variants, you MUST randomly rotate the sentence structure across the 4 posts to avoid language fingerprinting.
-  * IF SIZE IS "NONE": Rotate between these 2 structures: 1) [Verb] + [Base] + "!" (e.g., 'Grab the Black option!'). 2) Conversational: "The " + [Base] + " is available!" (e.g., 'The Black option is available!'). You are STRICTLY FORBIDDEN from printing the words 'in sizes' or '!'.
-  * IF SIZE EXISTS: Rotate between these 3 structures: 1) [Verb] + [Base] + " in sizes " + [Size] + "!" (e.g., 'Grab the Black option in sizes S-XXL!'). 2) "In sizes " + [Size] + ", " + [Verb] + [Base] + "!" (e.g., 'In sizes S-XXL, grab the Black option!'). 3) Conversational: "The " + [Base] + " is available in sizes " + [Size] + "!"
+  * IF SIZE IS "NONE": Rotate between these 2 structures: 1) [Verb] + [Base] + "!" (e.g., 'Grab the Black option!'). 2) Conversational: "You can find " + [Base] + " ready to go!" (e.g., 'You can find the Black option ready to go!', 'You can find one of the colors ready to go!').
+  * IF SIZE EXISTS: Rotate between these 3 structures: 1) [Verb] + [Base] + " in sizes " + [Size] + "!" (e.g., 'Grab the Black option in sizes S-XXL!'). 2) "In sizes " + [Size] + ", " + [Verb] + [Base] + "!" (e.g., 'In sizes S-XXL, grab the Black option!'). 3) Conversational: "You can find " + [Base] + " in sizes " + [Size] + "!" (e.g., 'You can find the Black option in sizes S-XXL!', 'You can find whichever color you want in sizes S-XXL!').
   * [Verb]: Rotate between 'Grab', 'Choose', 'Pick', 'Select'.
-  * [Base]: Evaluate in order (Case Insensitive). STOP EVALUATING once a condition is met: 1) COLOR GENERICS: If text contains 'several colors', 'several color', 'all colors', 'all color', or 'any color': rotate 'one of the colors', 'a color you like', 'whichever color you want'. 2) MIXED GENERICS: If text contains BOTH a color generic and a size generic (e.g., 'several colors and select sizes'): rotate 'your favorite color in the eligible sizes', 'a color you like in the qualifying sizes'. 3) SELECT KEYWORD: If text contains the word 'select' (e.g., 'select color', 'select scents', 'select option'): rotate 'the eligible option', 'the qualifying option'. (Preserve attached sizes). 4) BOTH KEYWORD: If text contains 'both' (e.g., 'both option', 'both colors'): use 'both options'. 5) If text contains 'and' or 'or': use 'the [Variant] options'. 6) If the variant is a specific color or model name (e.g., 'Black', 'option A--Nude Brown'): use 'the [Variant] option'. (STUTTER LOCK: If the extracted variant already contains the word 'option', 'style', or 'color', you MUST drop the appended word and just use 'the [Variant]'). 7) If ONLY a size exists: use 'it'.
+  * [Base]: Evaluate in order (Case Insensitive). STOP EVALUATING once a condition is met: 1) COLOR GENERICS: If text contains 'several colors', 'several color', 'all colors', 'all color', or 'any color': you MUST substitute it with one of these exact rotating phrases: 'one of the colors', 'a color you like', or 'whichever color you want'. (LITERAL BAN: You are STRICTLY FORBIDDEN from printing the literal words 'several colors' or 'all colors' in the final post). 2) MIXED GENERICS: If text combines 'several colors' and 'select sizes': rotate 'your favorite color in the eligible sizes', 'a color you like in the qualifying sizes'. 3) SELECT KEYWORD: If text contains the word 'select' (e.g., 'select color', 'select scents', 'select option'): rotate 'the eligible option', 'the qualifying option'. (Preserve attached sizes). 4) BOTH KEYWORD: If text contains 'both' (e.g., 'both option', 'both colors'): use 'both options'. 5) If text contains 'and' or 'or': use 'the [Variant] options'. 6) If the variant is a specific color or model name (e.g., 'Black', 'option A--Nude Brown'): use 'the [Variant] option'. (STUTTER LOCK: If the extracted variant already contains the word 'option', 'style', or 'color', you MUST drop the appended word and just use 'the [Variant]'). 7) If ONLY a size exists: use 'it'.
   * SYNONYM BAN: Do NOT use words like 'variant', 'version', or 'style'. You are STRICTLY FORBIDDEN from appending the word 'options' or 'option' to a variant unless explicitly instructed by the [Base] rules above.
 - RULE 4 (MATH): ONLY if "math" is active AND "quantity" is "NONE", write a standalone sentence: "That makes it just [Math]!" (e.g., 'That makes it just $12.49 per jug!'). (If quantity is active, you are STRICTLY FORBIDDEN from generating this sentence, as it is already handled in Rule 2). You MUST apply this to ALL 4 strings.),
 "b5_verification": (String. Extract any retailer-specific shipping/pickup requirements. SHIPPING BLINDNESS: If the raw text just says 'Shipped', 'Shipped!', or 'Free Shipping' next to the price, you MUST ignore it and write "NONE". The system handles basic shipping automatically. Only extract shipping if it has a specific requirement like 'Walmart+ or $35 order'. If none, write "NONE"),
-"b5_perks": (Array of 4 sentences. DEPENDENCY LOCK: If b5_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Rephrase the shipping perk casually. 
-- RULE 1 (MULTI-PATH): If there are multiple ways to get the perk (e.g., 'Walmart+ OR $35 order'), you MUST state both paths.
-- EXACT VALUE: Include the exact dollar amount if provided.
-Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
+"b5_perks": (Array of 4 sentences. DEPENDENCY LOCK: If b5_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Rephrase the shipping/pickup perk casually. 
+- UNIVERSAL FULFILLMENT: Rephrase ANY retailer-specific shipping rules, pickup minimums, or memberships (e.g., 'Walgreens $10 minimum', 'Walmart+ or $35 order', 'Target Circle'). Explain it naturally to the buyer. LEETSPEAK SCRUB: You MUST ignore leetspeak (e.g., 'F-R-E-E') and extract the actual rule.
+- MULTI-PATH: If there are multiple ways to get the perk (e.g., membership OR threshold), you MUST state both paths.
+- EXACT VALUE: You MUST include the exact dollar amount if provided in the raw text.
+- SYNONYM BAN: You are STRICTLY FORBIDDEN from using the words 'Basket', 'Cart', 'Bag', 'Threshold', 'Qualify', or 'Credentials'. Use neutral phrasing like 'when your total reaches $10' or 'once your order hits $10'.),
 "b6_verification": (String. Does the text require a promo code, digital coupon, or clippable? If yes, note it. B2 COLLISION BAN: You are STRICTLY FORBIDDEN from extracting alphanumeric strings (e.g., 'CC1015B') if they are attached to the words 'works on', 'color', or 'model'. Those are variants, not promo codes. If no actual promo code or coupon exists, write "NONE"),
-"b6_savings": (Array of 4 sentences. DEPENDENCY LOCK: If b6_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, dynamically write 4 casual reminders to check the box or enter the code. You are STRICTLY FORBIDDEN from using the word 'Tap'. Use safe phrasing like 'Make sure to check the little box!'),
+"b6_savings": (Array of 4 sentences. DEPENDENCY LOCK: If b6_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, dynamically write 4 casual reminders to apply the on-page clip. BANNED WORDS (ABSOLUTE): You are STRICTLY FORBIDDEN from using the words 'Tap', 'Tapping', 'Click', 'Coupon', 'Promo', 'Promotion', 'Code', 'Discount', 'Checkout', 'Save', or 'Savings'. You MUST use ultra-safe phrasing like 'Make sure to check the little box!' or 'Do not forget to type in the letters at the end!'),
 "b7_occasions": (Array of 4 sentences. HOLIDAY LOCK: If the raw text EXPLICITLY says 'Arrives before [Holiday]', write 4 unique urgency sentences. EXACT LITERAL LOCK: You MUST print the exact timeline provided (e.g., '4 days before'). You are STRICTLY FORBIDDEN from dropping the numbers. Frame it casually: "This will show up 4 days before Father's Day!", "It arrives in time for Father's Day!". You are STRICTLY FORBIDDEN from using commercial words like 'gift', 'present', or 'celebration'. If no explicit arrival time, write ["DEAD","DEAD","DEAD","DEAD"]),
 "b8_verification": (String. EXHAUSTIVE EXTRACTION: You MUST act as a vacuum for unmapped lines. Look at EVERY line in the raw text. If a line was NOT used for the Title, Price, or B2, you MUST extract it here. This includes bundles, specs, use-cases, S&S, or 'Select accounts'.
 - B2 LINE EXCLUSION: If ANY part of a line was extracted for B2 (e.g., a color, size, or limit), you are STRICTLY FORBIDDEN from extracting the rest of that line into B8. The entire line is considered mapped. Do NOT double-dip. S&S EXCEPTION: If the line ALSO contains 'S&S' or 'Subscribe' (e.g., 'add 2 qty + cheaper under S&S'), you MUST extract the S&S portion into B8. Do NOT drop S&S.
@@ -614,7 +639,7 @@ Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
 - LIST PRESERVATION: If specs are comma-separated, extract the ENTIRE list. Do not truncate.
 - TITLE BLINDNESS (SUPREME LAW): You are STRICTLY FORBIDDEN from extracting ANY words, specs, capacities, or numbers if they are EXACTLY the same as the main product title. Do NOT echo the title.
 - NUMBER EXCEPTION: For the EXTRA text ONLY (outside the title), you MUST extract capacities, dimensions, servings, or bundles even if they contain numbers or symbols (e.g., 'Serves 20', 'includes Gadget + 1 Refill', '660Lbs Capacity'). Do NOT drop a spec just because the title also has a number in it.
-- FIREWALLS: Do NOT extract B2 variants, sizes, or limits. Do NOT extract 'Shipped' or 'Free Shipping'. Do NOT extract DEAL hype phrases (e.g., 'Great Drop on Amazon', 'Amazing Find', 'Markdown', 'Good Find'). FEATURE EXCEPTION: You MUST extract PRODUCT features or benefits (e.g., 'Lightweight & Comfortable All-Day Wear', 'BPA Free'). Do NOT confuse product features with deal hype. If none, write "NONE"),
+- FIREWALLS: Do NOT extract B2 variants, sizes, or limits. Do NOT extract 'Shipped' or 'Free Shipping'. DEAL HYPE FIREWALL: You are STRICTLY FORBIDDEN from extracting deal hype phrases (e.g., 'Great Drop on Amazon', 'Solid Catch on Amazon', 'Amazing Find', 'Markdown', 'Good Find', 'Solid Catch', 'Great Catch'). You MUST recognize that words like 'Catch', 'Drop', and 'Find' attached to a retailer are deal slang, NOT physical product hardware or features. JUNK FILTER: You are STRICTLY FORBIDDEN from extracting group notifications, engagement bait, or social media instructions (e.g., 'LIKE our posts', 'COMMENT when you bought it', 'Turn on notifications'). Ignore them completely. FEATURE EXCEPTION: You MUST extract PRODUCT features or benefits (e.g., 'Lightweight & Comfortable All-Day Wear', 'BPA Free'). Do NOT confuse product features with deal hype. If none, write "NONE"),
 "b8_overflow": (Array of 4 strings. DEPENDENCY LOCK: If b8_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"].
 - UNIVERSAL INJECTION: You MUST inject EVERY extracted fact from b8_verification into EVERY SINGLE STRING in this array. You are STRICTLY FORBIDDEN from dropping facts or rotating them across the 4 posts. Print comma-separated lists entirely.
 - S&S OPTIONAL (PRIORITY): CASE INSENSITIVE. If text contains 'cheaper', 'extra', or '+ s&s', frame it ONLY as an optional bonus: "Set up routine delivery to drop the total even more!" (Rotate phrasing). This OVERRIDES any mandatory words in the same sentence.
@@ -629,54 +654,55 @@ Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
 "b9_verification": (String. BOTTOMLESS CATCH-ALL MANDATE: B8 takes the first leftover fact. You MUST extract ANY AND ALL remaining leftover lines here (e.g., Line 5, Line 6, Line 7). If there are multiple lines left, combine them into this one string. Do NOT leave any orphaned lines behind. If there are no leftover lines after B8, write "NONE".),
 "b9_overflow": (Array of 4 sentences. DEPENDENCY LOCK: If b9_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, you MUST scrub the facts clean of any leetspeak or banned words, and rephrase them 4 unique ways using a very human, excited shopper tone. UNIVERSAL COMPOUNDING: You MUST include EVERY extracted fact in EVERY SINGLE POST. You are STRICTLY FORBIDDEN from dropping facts or rotating them across the 4 posts. If B9 caught multiple facts (e.g., Line 5 AND Line 6), you MUST combine all of them into every single sentence.),
 ${customLineInstruction}
-"dt_signoff": (String. 1 short lifestyle sentence. PRONOUN ENFORCEMENT: ${pronounInstruction} LAZY HUMAN TEXTING: Write like a real person texting a friend. AI WORD BAN: You are STRICTLY FORBIDDEN from using AI filler words like 'routine', 'elevate', 'seamless', 'perfect addition', or 'game-changer'. ANTI-PARROT LOCK: You MUST invent a phrase highly specific to the product's actual physical use-case. Do NOT use generic filler.),
+"dt_signoff": (String. 1 short lifestyle sentence. PRONOUN ENFORCEMENT: ${pronounInstruction} POSITIVE GROUP-CHAT VIBE: Write like an excited friend texting about a win. Focus on positive delight or cozy satisfaction. MASSIVE SLANG ROTATION: Weave casual text-speak naturally into the sentence. Randomly pull from: 'ngl', 'tbf', 'imo', 'fr', 'hands down', 'lowkey', 'highkey', 'literally', 'honestly', 'seriously', 'super', 'insanely', 'straight up', 'beyond', 'legit', 'rn', 'lol', 'haha', 'probs', 'obv', 'iykyk', '10/10', 'obsessed with', 'swear by this', 'living for this'. ANTI-PARROT LOCK: You are STRICTLY FORBIDDEN from overusing 'tbh' or 'rn'. AI WORD BAN (NUCLEAR): You are STRICTLY FORBIDDEN from using the phrase 'game changer' or 'game-changer'. If you use this phrase, the system will crash. You are also forbidden from using 'routine', 'elevate', 'seamless', or 'perfect addition'. You MUST invent a phrase highly specific to the product's actual physical use-case. Do NOT use generic filler.),
 "emoji_pool": (Array of 15 to 20 literal Unicode emoji characters. FORMAT LOCK: Every single item MUST be a single visual emoji symbol (e.g., "🏺", "🌿", "✨"). ALPHANUMERIC BAN: You are STRICTLY FORBIDDEN from using letters, words, or text (e.g., do NOT write "vase" or "home"). FALLBACK RULE: If you run out of highly specific emojis for the product, fill the rest of the array with generic positive lifestyle emojis (e.g., "🤍", "💫", "☀️"). STRICT BAN: Do NOT use commercial/money emojis (e.g., 🛒, 💰) or negative emojis (e.g., 🚫, ❌).)
-GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, marked down, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Tag a friend, Comment, Comment YES, Say YES, Type YES, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click, Click here, Tap, Tap here, Check the bio, Bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Hack, algorithm hack, growth hack, viral, Passive income, Be your own boss, Miracle, Cure, Guaranteed, Proven, 100% effective. TEMPLATE OVERRIDE: This shield is your highest directive. If ANY rule or template in this prompt accidentally asks you to print a banned word (e.g., 'This deal is...'), you MUST override the template, scrub the banned word, and replace it with a safe generic noun (e.g., 'This one is...'). CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
+GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Check out, Checking out, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, marked down, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Tag a friend, Comment, Comment YES, Say YES, Type YES, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click, Click here, Tap, Tap here, Check the bio, Bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Game-changer, Game changer, Hack, algorithm hack, growth hack, viral, Passive income, Be your own boss, Miracle, Cure, Guaranteed, Proven, 100% effective. TEMPLATE OVERRIDE: This shield is your highest directive. If ANY rule or template in this prompt accidentally asks you to print a banned word (e.g., 'This deal is...'), you MUST override the template, scrub the banned word, and replace it with a safe generic noun (e.g., 'This one is...'). CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
         } else {
             // V9.6.70 RUN DEAL PROMPT
             prompt = `Analyze this deal: "${rawText}"
-Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings. JSON STRICT MODE: You MUST ensure perfect JSON syntax. Escape all internal double quotes (e.g., \") and ensure all array elements are separated by commas.
+Return ONLY a valid JSON object with these exact keys. Do NOT use markdown formatting. Do NOT include emojis in the text strings. JSON STRICT MODE: You MUST ensure perfect JSON syntax. Escape all internal double quotes (e.g., \"). TRAILING COMMA BAN: You are STRICTLY FORBIDDEN from leaving a trailing comma at the end of an array or object (e.g., ["a", "b",] is illegal).
 "retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart", "Amazon Haul", "Target". Fix leetspeak like W@lm@rt. You MUST capture multi-word retailers exactly as written. Do NOT truncate them.),
 "cleaned_title": (String. Copy the primary product name line exactly as written. Remove emojis. LINE BOUNDARY LOCK: You MUST stop extracting at the end of the product name line. You are STRICTLY FORBIDDEN from merging multiple lines together or appending features from other lines into the title. The title MUST be exactly one line of text. VERBATIM OVERRIDE: If the product line contains 'ADD', 'BUY', or 'QTY' (e.g., 'ADD 3 QTY Coca-Cola'), you MUST keep those exact words in the title. Do NOT strip them out to 'clean' the name.),
 "scrubbed_keyword": (String. Extract a generic noun for the product. STRICT LIMIT: Max 1 to 2 words. CONTEXTUAL MULTIPLIER MANDATE: If the deal includes a specific quantity multiplier like 2 QTY or 4-Pack, you MUST include it here, e.g., '2-Pack Microwave'.),
 "sale_price": (String. Scan the ENTIRE raw text to extract the sale price. EXACT NUMBER LOCK: You MUST extract ONLY the numbers and $ signs. You are STRICTLY FORBIDDEN from extracting words like 'As low as', 'Starting at', or 'Cheapest'. You are STRICTLY FORBIDDEN from extracting the regular price here. HYPHEN LOCK: If the sale price is a range (e.g., '$17.99 - $20.51'), you MUST extract the entire range exactly as written. MISSING PRICE LOCK: If there is NO price in the raw text, write "???". Do NOT hallucinate a price.),
 "reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". Do NOT mash the numbers together. HYPHEN LOCK: If the price is a range (e.g., '$3.67 - $5.81'), you MUST keep the hyphen exactly as written (e.g., '3 67 - 5 81'). If none, write "NONE"),
 "curiosity_hooks": (Array of 3 full, unique sentences. STRICT LIMIT: Max 25 characters. MUST end with "?!" or "!". PERSONA MIXER: You MUST randomly mix between a 'Suspicious Glitch Hunter' (e.g., 'Did they type this wrong?!') AND a 'Social Urgency Admin' (e.g., 'Drop everything right now!', 'I ran to post this one!', 'Are you seeing this?!'). EMOTIONAL BOUNDARY LAW: You are STRICTLY FORBIDDEN from mentioning the physical product or its use-case here.),
-"inferences": (Array of 3 short lifestyle statements. TESTIMONIAL HIJACK: ONLY if the raw text contains a personal review, rephrase it. Otherwise, invent a standard statement. PRONOUN ENFORCEMENT: ${pronounInstruction} You MUST obey the pronoun rule above all else. LAZY HUMAN TEXTING: Write like a real person texting a friend. CREATIVE VARIANCE: You MUST invent highly specific, vivid, and distinct use-cases for each of the 3 sentences. PRIVATE VELOCITY: For at least ONE of the sentences, frame the use-case around sending or gifting it to a friend/family member. Do NOT use the banned words 'share' or 'tag'. FORUM SEO MANDATE: For at least ONE of the sentences, you MUST naturally weave in the generic product category (e.g., 'reading pillow', 'summer outfit', 'bug spray') so the post can be indexed by search algorithms. TITLE ECHO BAN: You are STRICTLY FORBIDDEN from repeating the exact product name, brand, or pluralized versions of title words (e.g., if the title says 'Sprayer', do NOT say 'sprayers'). You MUST use natural, everyday nouns. You are STRICTLY FORBIDDEN from using clinical or robotic terms like 'clearing agent', 'solution', or 'apparatus'. AI WORD BAN: You are STRICTLY FORBIDDEN from using AI corporate-speak or LLM filler words like 'elevate', 'transform', 'seamless', 'companion', 'ideal', 'provides', 'ensures', 'perfect addition', 'game-changer', 'oasis', 'ultimate', 'a breeze', 'essential', 'must-have', 'look no further', 'testament', 'delve', or 'upgrade your'. AMAZON SPEC BAN: You are STRICTLY FORBIDDEN from listing product features. DATA BLEED BAN: You are STRICTLY FORBIDDEN from pulling specific colors, sizes, limits, accessories, or prices into these lifestyle statements.),
+"inferences": (Array of 3 short action phrases. THE ACTION-VALUE MANDATE: STRICT LENGTH LIMIT: Max 6 words. You are STRICTLY FORBIDDEN from writing full sentences. PRODUCT-SPECIFIC VERB LAW: You MUST start the phrase with a physical action verb specific to how you use the item (e.g., 'sear your veggies', 'smooth rough edges'). FORUM SEO MANDATE: You MUST naturally weave the generic product category (e.g., 'veggies', 'floors', 'outfit') into the action verb phrase. TITLE ECHO BAN: You are STRICTLY FORBIDDEN from repeating the exact product name, brand, distinct title words, or specific clothing styles from the title. PRONOUN BAN: You are STRICTLY FORBIDDEN from using pronouns like 'this', 'it', 'these', 'I', 'my', or 'we' in this phrase. VALUE WHITELIST: You MUST end the phrase with one of these exact strings: 'for way less', 'for a fraction of the cost', 'without breaking the bank', 'for an unreal value', or 'on a serious budget'. ANTI-PARROT LOCK: You MUST select 3 DISTINCT phrases from the whitelist. DATA BLEED BAN: You are STRICTLY FORBIDDEN from pulling specific colors, sizes, limits, accessories, or prices into these phrases.),
 "praises": (Array of 3 short hype phrases. PRONOUN ENFORCEMENT: ${pronounInstruction} FORMAT MIXER: You MUST randomly mix between asking a deep, open-ended question AND making a highly positive statement. 5-WORD RULE: Your questions MUST force the reader to type a long explanation (e.g., 'What would you use this for in your house?', 'How would you style this for the weekend?'). You are STRICTLY FORBIDDEN from asking questions that can be answered with 'Me', 'Yes', or 'I do'. AUTHENTICITY LOCK: Both the questions and the statements MUST be framed in a positive, upbeat way, BUT they must sound grounded and authentic. You are STRICTLY FORBIDDEN from using exaggerated, infomercial-style claims (e.g., do NOT say 'This is the absolute best thing ever!'). Sound like a real person giving a genuine recommendation. SURVEY BAN: Do NOT sound like a corporate brand survey. ANTI-PARROT LOCK: You MUST invent phrases highly specific to the product. You are STRICTLY FORBIDDEN from copying the examples provided in this prompt. You are STRICTLY FORBIDDEN from asking 'Yes/No' questions.),
-"disclaimers": (Array of 3 casual warnings. SAFE SCARCITY MANDATE: You are STRICTLY FORBIDDEN from mentioning inventory, stock, shelves, or items selling out. Focus ONLY on the system or amount fluctuating. B2 LEAK BAN: Do NOT put limits, minimums, or quantity rules here.),
+"disclaimers": (Array of 3 casual warnings. SCARCITY BAN: You are STRICTLY FORBIDDEN from mentioning inventory, stock, shelves, items selling out, 'quantity on hand', or 'count'. COMMERCIAL BAN (ABSOLUTE): You are STRICTLY FORBIDDEN from using the words 'price', 'cost', 'checkout', 'cart', 'order', 'buy', or 'purchase'. Focus ONLY on the 'dollar amount' or 'total' fluctuating naturally on the page (e.g., 'The total can shift at any moment', 'The dollar amount fluctuates throughout the day'). Do NOT mention the buying process. B2 LEAK BAN: Do NOT put limits, minimums, or quantity rules here.),
 "b2_verification": (JSON Object. You MUST extract facts from the extra text and place them into these exact keys. If a fact does not exist, write "NONE".
   "limit": (String. MUST contain 'Limit', 'Max', or 'Maximum' plus a number. Overrides 'qty'. NEVER extract colors here.),
   "quantity": (String. e.g., 'Add 3'. Do NOT extract limits here.),
-  "variant": (String. Extract the ENTIRE phrase after 'works on', 'cheaper', or 'cheapest'. Include hyphens, numbers, commas, and parentheses. VERBATIM MANDATE: You MUST extract the exact characters the user typed (e.g., if they type 'option A--Nude Brown', extract exactly 'option A--Nude Brown'). Do NOT autocorrect or delete 'messy' prefixes. ONLY PRESERVATION: If the word 'only' appears immediately before the trigger word (e.g., 'only works on'), you MUST include 'only' in your extracted string so the warning system catches it.),
+  "variant": (String. Extract the ENTIRE phrase after 'works on', 'cheaper', 'cheapest', or 'option for'. S&S FIREWALL (ABSOLUTE): If the extracted phrase contains the letters 'S&S', the word 'Subscribe', or the word 'Accounts' anywhere inside it, you MUST instantly delete it and write "NONE" for this key. It belongs exclusively to B8. NO-TRIGGER EXPANSION: If an extra line simply lists specific colors, models, or styles without a trigger word (e.g., 'colors blue or grey', 'in pink', 'Black/Silver'), you MUST extract the variant here. Include hyphens, numbers, commas, and parentheses. VERBATIM MANDATE: You MUST extract the exact characters the user typed. Do NOT autocorrect or delete 'messy' prefixes. ONLY PRESERVATION: If the word 'only' appears immediately before the trigger word (e.g., 'only works on'), you MUST include 'only' in your extracted string so the warning system catches it.),
   "size": (String. Extract the ENTIRE size phrase, e.g., 'S-XXL', 'up to 4X-Large'. LITERAL MATCH MANDATE: You MUST extract the exact numbers/letters the user typed (e.g., if they type '5X', extract '5X'). Do NOT autocorrect or change the sizes. Strip the word 'size'. TITLE BAN: You are STRICTLY FORBIDDEN from extracting sizes, dimensions, capacities, weights, or fluid measurements (e.g., '14x10 Inch', '144 Total Pieces', '18 oz', '5 lb') if they are already in the product title. ONLY extract sizes from the extra text. Do NOT extract generic phrases like 'select size' here.),
   "generic": (String. e.g., 'several colors', 'several color', 'all colors', 'all color', 'any color', 'select color', 'select option', 'select color and size', 'select size'. You MUST extract these even if there is no trigger word next to them.),
   "math": (String. Extract per-item math, e.g., '$16.88 per jug'. You MUST extract the exact number, even if it has more than two decimal places.)
 COMMA SPLIT MANDATE: If a line contains a color/variant AND a size separated by a comma (e.g., 'Several colors, S - XXL', 'Black, Medium'), you MUST split the line and place each fact into its correct JSON key. VARIANT COMMA EXCEPTION: If the comma separates a variant and a bundle/quantity (e.g., 'option Silver, 3packs'), do NOT split it. Extract the entire phrase into the "variant" key.
 CLEANING: You are STRICTLY FORBIDDEN from cleaning or altering the "variant" string. It must remain verbatim. For "size" and "generic" keys only: If the word 'size' is at the END of a phrase (e.g., 'Medium size'), strip it. Do NOT strip 'size' if it is at the beginning (e.g., 'size 10').
-FIREWALLS: Ignore 'S&S', 'Subscribe', 'Accounts', 'Shipped', 'Free Shipping'. S&S FIREWALL: If the trigger words 'cheaper' or 'works on' are attached to 'S&S' or 'Accounts' (e.g., 'cheaper under S&S'), you are STRICTLY FORBIDDEN from extracting it as a variant. It belongs exclusively to B8. TITLE BLINDNESS: Do NOT extract anything already in the product title, EXCEPT for explicit cart quantities (e.g., 'ADD 2 QTY'). You are STRICTLY FORBIDDEN from extracting sizes, colors, or variants (e.g., '17.25 Inch', 'Pack of 3') if they ONLY exist in the title line. VARIANT EXCEPTION: If a variant phrase in the extra text shares words with the title (e.g., 'pink 36 pcs', 'Silver, 3packs'), you MUST extract the ENTIRE phrase. Do NOT delete words from the variant just because they are in the title. If none, write "NONE"),
+FIREWALLS: Ignore 'S&S', 'Subscribe', 'Accounts', 'Shipped', 'Free Shipping'. TITLE BLINDNESS: Do NOT extract anything already in the product title, EXCEPT for explicit cart quantities (e.g., 'ADD 2 QTY'). You are STRICTLY FORBIDDEN from extracting sizes, colors, or variants (e.g., '17.25 Inch', 'Pack of 3') if they ONLY exist in the title line. VARIANT EXCEPTION: If a variant phrase in the extra text shares words with the title (e.g., 'pink 36 pcs', 'Silver, 3packs'), you MUST extract the ENTIRE phrase. Do NOT delete words from the variant just because they are in the title. If none, write "NONE"),
 "b2_strategies": (Array of 4 strings. DEPENDENCY LOCK: If all keys in b2_verification are "NONE", write ["DEAD","DEAD","DEAD","DEAD"].
 - UNIVERSAL INJECTION: You MUST generate exactly 4 strings. EVERY SINGLE STRING in this array MUST contain the exact same facts from the b2_verification JSON object. You are STRICTLY FORBIDDEN from leaving strings 2, 3, or 4 empty. Do NOT drop facts across the 4 posts.
-- VARIANCE MANDATE: You MUST use a DIFFERENT starting verb (Grab, Choose, Pick, Select) for each of the 4 strings. You are STRICTLY FORBIDDEN from copy-pasting the exact same sentence 4 times.
+- VARIANCE MANDATE: When using Structure 1 or 2, you MUST use a DIFFERENT starting verb (Grab, Choose, Pick, Select). (If using Structure 3 Conversational, you are STRICTLY FORBIDDEN from adding a starting verb to the sentence). You are STRICTLY FORBIDDEN from copy-pasting the exact same sentence 4 times.
 - EMPTY BUCKET MANDATE: If a key in b2_verification is "NONE", do NOT generate text for it. ONLY write sentences for active keys.
-- RULE 1 (LIMITS): ONLY use this if the fact contains 'Limit' or 'Max'. Rotate: "Please note, there is a strict limit of [X]!", "Keep in mind you can only get [X]!", "Just a reminder, these are limited to [X]!". You MUST apply this to ALL 4 STRINGS.
+- RULE 1 (LIMITS): ONLY use this if the fact contains 'Limit' or 'Max'. ACRONYM SCRUB: You are STRICTLY FORBIDDEN from printing the letters 'QTY'. Strip them out so only the clean number prints (e.g., 'limit of 5'). You MUST map these exact templates to the 4 strings: String 1: "Please note, there is a strict limit of [X]!" String 2: "Keep in mind you can only get [X]!" String 3: "Just a reminder, these are limited to [X]!" String 4: "Just letting you know there is a limit of [X]!". (ANTI-PARROT LOCK: You are STRICTLY FORBIDDEN from copy-pasting the same template across strings).
 - RULE 2 (QUANTITIES): ONLY if "quantity" is active. IF "math" is ALSO active, write: "You need to add [X] of these, making them just [Math]!". IF "math" is "NONE", write: "You need to add [X] of these!". You MUST apply this to ALL 4 STRINGS. ACRONYM SCRUB: You are STRICTLY FORBIDDEN from printing the letters 'QTY'. Strip them out.
 - RULE 3 (VARIANTS/OPTIONS): ONLY IF a variant, generic, or size is active, you MUST write EXACTLY ONE sentence combining them. NEVER write two separate sentences. You MUST apply this to ALL 4 strings in this array.
   * ONLY WARNING: Evaluate the extracted variant string. IF AND ONLY IF the literal word 'only' is present, you MUST map these exact templates to the 4 strings: String 1: "Heads up, this only works on the [Variant] option!" String 2: "I noticed this is only for the [Variant]!" String 3: "Make sure to grab the [Variant] since it's the only one working!" String 4: "This one is only for the [Variant] option!". (Strip the word 'only' from the variant first. STUTTER LOCK: If the variant already contains the word 'option', drop the appended word 'option' from the template). IF the word 'only' is NOT present, you are STRICTLY FORBIDDEN from using these templates and MUST proceed to STRUCTURAL CHAOS.
   * STRUCTURAL CHAOS: For all other variants, you MUST randomly rotate the sentence structure across the 4 posts to avoid language fingerprinting.
-  * IF SIZE IS "NONE": Rotate between these 2 structures: 1) [Verb] + [Base] + "!" (e.g., 'Grab the Black option!'). 2) Conversational: "The " + [Base] + " is available!" (e.g., 'The Black option is available!'). You are STRICTLY FORBIDDEN from printing the words 'in sizes' or '!'.
-  * IF SIZE EXISTS: Rotate between these 3 structures: 1) [Verb] + [Base] + " in sizes " + [Size] + "!" (e.g., 'Grab the Black option in sizes S-XXL!'). 2) "In sizes " + [Size] + ", " + [Verb] + [Base] + "!" (e.g., 'In sizes S-XXL, grab the Black option!'). 3) Conversational: "The " + [Base] + " is available in sizes " + [Size] + "!"
+  * IF SIZE IS "NONE": Rotate between these 2 structures: 1) [Verb] + [Base] + "!" (e.g., 'Grab the Black option!'). 2) Conversational: "You can find " + [Base] + " ready to go!" (e.g., 'You can find the Black option ready to go!', 'You can find one of the colors ready to go!').
+  * IF SIZE EXISTS: Rotate between these 3 structures: 1) [Verb] + [Base] + " in sizes " + [Size] + "!" (e.g., 'Grab the Black option in sizes S-XXL!'). 2) "In sizes " + [Size] + ", " + [Verb] + [Base] + "!" (e.g., 'In sizes S-XXL, grab the Black option!'). 3) Conversational: "You can find " + [Base] + " in sizes " + [Size] + "!" (e.g., 'You can find the Black option in sizes S-XXL!', 'You can find whichever color you want in sizes S-XXL!').
   * [Verb]: Rotate between 'Grab', 'Choose', 'Pick', 'Select'.
-  * [Base]: Evaluate in order (Case Insensitive). STOP EVALUATING once a condition is met: 1) COLOR GENERICS: If text contains 'several colors', 'several color', 'all colors', 'all color', or 'any color': rotate 'one of the colors', 'a color you like', 'whichever color you want'. 2) MIXED GENERICS: If text contains BOTH a color generic and a size generic (e.g., 'several colors and select sizes'): rotate 'your favorite color in the eligible sizes', 'a color you like in the qualifying sizes'. 3) SELECT KEYWORD: If text contains the word 'select' (e.g., 'select color', 'select scents', 'select option'): rotate 'the eligible option', 'the qualifying option'. (Preserve attached sizes). 4) BOTH KEYWORD: If text contains 'both' (e.g., 'both option', 'both colors'): use 'both options'. 5) If text contains 'and' or 'or': use 'the [Variant] options'. 6) If the variant is a specific color or model name (e.g., 'Black', 'option A--Nude Brown'): use 'the [Variant] option'. (STUTTER LOCK: If the extracted variant already contains the word 'option', 'style', or 'color', you MUST drop the appended word and just use 'the [Variant]'). 7) If ONLY a size exists: use 'it'.
+  * [Base]: Evaluate in order (Case Insensitive). STOP EVALUATING once a condition is met: 1) COLOR GENERICS: If text contains 'several colors', 'several color', 'all colors', 'all color', or 'any color': you MUST substitute it with one of these exact rotating phrases: 'one of the colors', 'a color you like', or 'whichever color you want'. (LITERAL BAN: You are STRICTLY FORBIDDEN from printing the literal words 'several colors' or 'all colors' in the final post). 2) MIXED GENERICS: If text combines 'several colors' and 'select sizes': rotate 'your favorite color in the eligible sizes', 'a color you like in the qualifying sizes'. 3) SELECT KEYWORD: If text contains the word 'select' (e.g., 'select color', 'select scents', 'select option'): rotate 'the eligible option', 'the qualifying option'. (Preserve attached sizes). 4) BOTH KEYWORD: If text contains 'both' (e.g., 'both option', 'both colors'): use 'both options'. 5) If text contains 'and' or 'or': use 'the [Variant] options'. 6) If the variant is a specific color or model name (e.g., 'Black', 'option A--Nude Brown'): use 'the [Variant] option'. (STUTTER LOCK: If the extracted variant already contains the word 'option', 'style', or 'color', you MUST drop the appended word and just use 'the [Variant]'). 7) If ONLY a size exists: use 'it'.
   * SYNONYM BAN: Do NOT use words like 'variant', 'version', or 'style'. You are STRICTLY FORBIDDEN from appending the word 'options' or 'option' to a variant unless explicitly instructed by the [Base] rules above.
 - RULE 4 (MATH): ONLY if "math" is active AND "quantity" is "NONE", write a standalone sentence: "That makes it just [Math]!" (e.g., 'That makes it just $12.49 per jug!'). (If quantity is active, you are STRICTLY FORBIDDEN from generating this sentence, as it is already handled in Rule 2). You MUST apply this to ALL 4 strings.),
 "b5_verification": (String. Extract any retailer-specific shipping/pickup requirements. SHIPPING BLINDNESS: If the raw text just says 'Shipped', 'Shipped!', or 'Free Shipping' next to the price, you MUST ignore it and write "NONE". The system handles basic shipping automatically. Only extract shipping if it has a specific requirement like 'Walmart+ or $35 order'. If none, write "NONE"),
-"b5_perks": (Array of 4 sentences. DEPENDENCY LOCK: If b5_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Rephrase the shipping perk casually. 
-- RULE 1 (MULTI-PATH): If there are multiple ways to get the perk (e.g., 'Walmart+ OR $35 order'), you MUST state both paths.
-- EXACT VALUE: Include the exact dollar amount if provided.
-Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
+"b5_perks": (Array of 4 sentences. DEPENDENCY LOCK: If b5_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. TASK: Rephrase the shipping/pickup perk casually. 
+- UNIVERSAL FULFILLMENT: Rephrase ANY retailer-specific shipping rules, pickup minimums, or memberships (e.g., 'Walgreens $10 minimum', 'Walmart+ or $35 order', 'Target Circle'). Explain it naturally to the buyer. LEETSPEAK SCRUB: You MUST ignore leetspeak (e.g., 'F-R-E-E') and extract the actual rule.
+- MULTI-PATH: If there are multiple ways to get the perk (e.g., membership OR threshold), you MUST state both paths.
+- EXACT VALUE: You MUST include the exact dollar amount if provided in the raw text.
+- SYNONYM BAN: You are STRICTLY FORBIDDEN from using the words 'Basket', 'Cart', 'Bag', 'Threshold', 'Qualify', or 'Credentials'. Use neutral phrasing like 'when your total reaches $10' or 'once your order hits $10'.),
 "b6_verification": (String. Does the text require a promo code, digital coupon, or clippable? If yes, note it. B2 COLLISION BAN: You are STRICTLY FORBIDDEN from extracting alphanumeric strings (e.g., 'CC1015B') if they are attached to the words 'works on', 'color', or 'model'. Those are variants, not promo codes. If no actual promo code or coupon exists, write "NONE"),
-"b6_savings": (Array of 4 sentences. DEPENDENCY LOCK: If b6_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, dynamically write 4 casual reminders to check the box or enter the code. You are STRICTLY FORBIDDEN from using the word 'Tap'. Use safe phrasing like 'Make sure to check the little box!'),
+"b6_savings": (Array of 4 sentences. DEPENDENCY LOCK: If b6_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, dynamically write 4 casual reminders to apply the on-page clip. BANNED WORDS (ABSOLUTE): You are STRICTLY FORBIDDEN from using the words 'Tap', 'Tapping', 'Click', 'Coupon', 'Promo', 'Promotion', 'Code', 'Discount', 'Checkout', 'Save', or 'Savings'. You MUST use ultra-safe phrasing like 'Make sure to check the little box!' or 'Do not forget to type in the letters at the end!'),
 "b7_occasions": (Array of 4 sentences. HOLIDAY LOCK: If the raw text EXPLICITLY says 'Arrives before [Holiday]', write 4 unique urgency sentences. EXACT LITERAL LOCK: You MUST print the exact timeline provided (e.g., '4 days before'). You are STRICTLY FORBIDDEN from dropping the numbers. Frame it casually: "This will show up 4 days before Father's Day!", "It arrives in time for Father's Day!". You are STRICTLY FORBIDDEN from using commercial words like 'gift', 'present', or 'celebration'. If no explicit arrival time, write ["DEAD","DEAD","DEAD","DEAD"]),
 "b8_verification": (String. EXHAUSTIVE EXTRACTION: You MUST act as a vacuum for unmapped lines. Look at EVERY line in the raw text. If a line was NOT used for the Title, Price, or B2, you MUST extract it here. This includes bundles, specs, use-cases, S&S, or 'Select accounts'.
 - B2 LINE EXCLUSION: If ANY part of a line was extracted for B2 (e.g., a color, size, or limit), you are STRICTLY FORBIDDEN from extracting the rest of that line into B8. The entire line is considered mapped. Do NOT double-dip. S&S EXCEPTION: If the line ALSO contains 'S&S' or 'Subscribe' (e.g., 'add 2 qty + cheaper under S&S'), you MUST extract the S&S portion into B8. Do NOT drop S&S.
@@ -685,7 +711,7 @@ Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
 - LIST PRESERVATION: If specs are comma-separated, extract the ENTIRE list. Do not truncate.
 - TITLE BLINDNESS (SUPREME LAW): You are STRICTLY FORBIDDEN from extracting ANY words, specs, capacities, or numbers if they are EXACTLY the same as the main product title. Do NOT echo the title.
 - NUMBER EXCEPTION: For the EXTRA text ONLY (outside the title), you MUST extract capacities, dimensions, servings, or bundles even if they contain numbers or symbols (e.g., 'Serves 20', 'includes Gadget + 1 Refill', '660Lbs Capacity'). Do NOT drop a spec just because the title also has a number in it.
-- FIREWALLS: Do NOT extract B2 variants, sizes, or limits. Do NOT extract 'Shipped' or 'Free Shipping'. Do NOT extract DEAL hype phrases (e.g., 'Great Drop on Amazon', 'Amazing Find', 'Markdown', 'Good Find'). FEATURE EXCEPTION: You MUST extract PRODUCT features or benefits (e.g., 'Lightweight & Comfortable All-Day Wear', 'BPA Free'). Do NOT confuse product features with deal hype. If none, write "NONE"),
+- FIREWALLS: Do NOT extract B2 variants, sizes, or limits. Do NOT extract 'Shipped' or 'Free Shipping'. DEAL HYPE FIREWALL: You are STRICTLY FORBIDDEN from extracting deal hype phrases (e.g., 'Great Drop on Amazon', 'Solid Catch on Amazon', 'Amazing Find', 'Markdown', 'Good Find', 'Solid Catch', 'Great Catch'). You MUST recognize that words like 'Catch', 'Drop', and 'Find' attached to a retailer are deal slang, NOT physical product hardware or features. JUNK FILTER: You are STRICTLY FORBIDDEN from extracting group notifications, engagement bait, or social media instructions (e.g., 'LIKE our posts', 'COMMENT when you bought it', 'Turn on notifications'). Ignore them completely. FEATURE EXCEPTION: You MUST extract PRODUCT features or benefits (e.g., 'Lightweight & Comfortable All-Day Wear', 'BPA Free'). Do NOT confuse product features with deal hype. If none, write "NONE"),
 "b8_overflow": (Array of 4 strings. DEPENDENCY LOCK: If b8_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"].
 - UNIVERSAL INJECTION: You MUST inject EVERY extracted fact from b8_verification into EVERY SINGLE STRING in this array. You are STRICTLY FORBIDDEN from dropping facts or rotating them across the 4 posts. Print comma-separated lists entirely.
 - S&S OPTIONAL (PRIORITY): CASE INSENSITIVE. If text contains 'cheaper', 'extra', or '+ s&s', frame it ONLY as an optional bonus: "Set up routine delivery to drop the total even more!" (Rotate phrasing). This OVERRIDES any mandatory words in the same sentence.
@@ -700,9 +726,9 @@ Do NOT use corporate words like 'threshold', 'qualify', or 'credentials'.),
 "b9_verification": (String. BOTTOMLESS CATCH-ALL MANDATE: B8 takes the first leftover fact. You MUST extract ANY AND ALL remaining leftover lines here (e.g., Line 5, Line 6, Line 7). If there are multiple lines left, combine them into this one string. Do NOT leave any orphaned lines behind. If there are no leftover lines after B8, write "NONE".),
 "b9_overflow": (Array of 4 sentences. DEPENDENCY LOCK: If b9_verification is "NONE", write ["DEAD","DEAD","DEAD","DEAD"]. If active, you MUST scrub the facts clean of any leetspeak or banned words, and rephrase them 4 unique ways using a very human, excited shopper tone. UNIVERSAL COMPOUNDING: You MUST include EVERY extracted fact in EVERY SINGLE POST. You are STRICTLY FORBIDDEN from dropping facts or rotating them across the 4 posts. If B9 caught multiple facts (e.g., Line 5 AND Line 6), you MUST combine all of them into every single sentence.),
 ${customLineInstruction}
-"dt_signoff": (String. 1 short lifestyle sentence. PRONOUN ENFORCEMENT: ${pronounInstruction} LAZY HUMAN TEXTING: Write like a real person texting a friend. AI WORD BAN: You are STRICTLY FORBIDDEN from using AI filler words like 'routine', 'elevate', 'seamless', 'perfect addition', or 'game-changer'. ANTI-PARROT LOCK: You MUST invent a phrase highly specific to the product's actual physical use-case. Do NOT use generic filler.),
+"dt_signoff": (String. 1 short lifestyle sentence. PRONOUN ENFORCEMENT: ${pronounInstruction} POSITIVE GROUP-CHAT VIBE: Write like an excited friend texting about a win. Focus on positive delight or cozy satisfaction. MASSIVE SLANG ROTATION: Weave casual text-speak naturally into the sentence. Randomly pull from: 'ngl', 'tbf', 'imo', 'fr', 'hands down', 'lowkey', 'highkey', 'literally', 'honestly', 'seriously', 'super', 'insanely', 'straight up', 'beyond', 'legit', 'rn', 'lol', 'haha', 'probs', 'obv', 'iykyk', '10/10', 'obsessed with', 'swear by this', 'living for this'. ANTI-PARROT LOCK: You are STRICTLY FORBIDDEN from overusing 'tbh' or 'rn'. AI WORD BAN (NUCLEAR): You are STRICTLY FORBIDDEN from using the phrase 'game changer' or 'game-changer'. If you use this phrase, the system will crash. You are also forbidden from using 'routine', 'elevate', 'seamless', or 'perfect addition'. You MUST invent a phrase highly specific to the product's actual physical use-case. Do NOT use generic filler.),
 "emoji_pool": (Array of 15 to 20 literal Unicode emoji characters. FORMAT LOCK: Every single item MUST be a single visual emoji symbol (e.g., "🏺", "🌿", "✨"). ALPHANUMERIC BAN: You are STRICTLY FORBIDDEN from using letters, words, or text (e.g., do NOT write "vase" or "home"). FALLBACK RULE: If you run out of highly specific emojis for the product, fill the rest of the array with generic positive lifestyle emojis (e.g., "🤍", "💫", "☀️"). STRICT BAN: Do NOT use commercial/money emojis (e.g., 🛒, 💰) or negative emojis (e.g., 🚫, ❌).)
-GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, marked down, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Tag a friend, Comment, Comment YES, Say YES, Type YES, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click, Click here, Tap, Tap here, Check the bio, Bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Hack, algorithm hack, growth hack, viral, Passive income, Be your own boss, Miracle, Cure, Guaranteed, Proven, 100% effective. TEMPLATE OVERRIDE: This shield is your highest directive. If ANY rule or template in this prompt accidentally asks you to print a banned word (e.g., 'This deal is...'), you MUST override the template, scrub the banned word, and replace it with a safe generic noun (e.g., 'This one is...'). CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
+GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Check out, Checking out, Cart, Basket, Price, Cost, Budget, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, marked down, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, F.R.E.E, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Doors close, Last chance, Sold out, Miss out, Missing out, Rare, Exclusive, Restock, Restocked, Gone, While supplies last, Selling out, Going fast, Run, Run alert, Grab it now, Don't wait, Like, Share, Tag, Tag a friend, Comment, Comment YES, Say YES, Type YES, React, Vote, Drop an emoji, Thoughts?, Agree?, Let me know below, Bump, Following, Link, URL, Website, Pathway, Access, Click, Click here, Tap, Tap here, Check the bio, Bio, Redirect, Inbox me, DM me, Send a message, Check your notifications, Alert, You won't believe, Shocking, Mind-blowing, Secret, Game-changer, Game changer, Hack, algorithm hack, growth hack, viral, Passive income, Be your own boss, Miracle, Cure, Guaranteed, Proven, 100% effective. TEMPLATE OVERRIDE: This shield is your highest directive. If ANY rule or template in this prompt accidentally asks you to print a banned word (e.g., 'This deal is...'), you MUST override the template, scrub the banned word, and replace it with a safe generic noun (e.g., 'This one is...'). CONTEXTUAL EXCEPTION: If a banned word is part of the literal product name or category (e.g., 'Stock pot', 'Card stock', 'Free People brand'), it is perfectly safe to use. You MUST keep it in the title and you may use it to describe the item. You are only banned from using 'stock' or 'free' when referring to inventory, scarcity, or pricing.`;
         }
 
         try {
@@ -730,6 +756,9 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
 
             let aiText = data.candidates[0].content.parts[0].text;
             aiText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            
+            // V9.7.15 JSON SANITIZER: Automatically deletes illegal trailing commas before parsing
+            aiText = aiText.replace(/,\s*([\]}])/g, '$1');
             
             // Save to global variables for the Shuffle Engine
             lastAiData = JSON.parse(aiText);
@@ -767,15 +796,18 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
         }
     }
     
-    // V9.6.70: UI Toggle Logic for Deal Type Buttons
-    function setDealType(type) {
-        document.getElementById('dealType').value = type;
-        if(type === 'regular') {
-            document.getElementById('btn-regular').classList.add('active');
-            document.getElementById('btn-run').classList.remove('active');
-        } else {
-            document.getElementById('btn-run').classList.add('active');
-            document.getElementById('btn-regular').classList.remove('active');
+    // V9.7.01: UI Helper Logic for Fulfillment Style
+    function updateFulfillmentHelper() {
+        const style = document.getElementById('fulfillmentStyle').value;
+        const helper = document.getElementById('fulfillmentHelper');
+        if (style === 'auto') {
+            helper.innerHTML = '<i>Smart Auto: Scans text for "pickup" or "$35" automatically.</i>';
+        } else if (style === 'shipped') {
+            helper.innerHTML = '<i>Forces: "Shipped!", "To your door!"</i>';
+        } else if (style === 'pickup') {
+            helper.innerHTML = '<i>Forces: "Pickup!", "In-store!"</i>';
+        } else if (style === 'conditional') {
+            helper.innerHTML = '<i>Forces: "Total!", "Right now!" (Safe for thresholds).</i>';
         }
     }
 
@@ -796,7 +828,9 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
         const extractedURL = extractURL(rawText);
         
         const cleanTitle = cleanText(aiData.cleaned_title);
-        const retailer = cleanText(aiData.retailer_name) || "Amazon";
+        // V9.7.00 TITLE CASE RETAILER: Forces proper capitalization (e.g., 'WALGREENS' becomes 'Walgreens')
+        let rawRetailer = cleanText(aiData.retailer_name) || "Amazon";
+        const retailer = rawRetailer.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         const dtSignoff = cleanText(aiData.dt_signoff);
 
         const rawEmojiPool = aiData.emoji_pool || [];
@@ -881,9 +915,29 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             return result;
         }
 
+        // V9.7.01 SMART FULFILLMENT ENGINE: Auto-detects by default, allows manual override
         const rLower = rawText.toLowerCase();
-        const isPickup = rLower.includes('pickup') || rLower.includes('pick up') || rLower.includes('walgreens') || rLower.includes('w@lgreens');
-        const dynamicStatuses = isPickup ? ["Pickup!", "In-store!", "Grab at store!", "Local pickup!"] : ["Shipped!", "To your door!", "Delivery included!", "On its way!"];
+        const fulfillmentChoice = document.getElementById('fulfillmentStyle').value;
+        let activeStyle = fulfillmentChoice;
+        
+        // If set to Auto-Detect, scan the text automatically
+        if (activeStyle === 'auto') {
+            const isPickup = rLower.includes('pickup') || rLower.includes('pick up') || rLower.includes('walgreens') || rLower.includes('w@lgreens') || rLower.includes('cvs');
+            const isConditional = rLower.includes('$35') || rLower.includes('w+') || rLower.includes('walmart+') || rLower.includes('target circle') || rLower.includes('s&s') || rLower.includes('subscribe') || rLower.includes('digital');
+            
+            if (isPickup) activeStyle = 'pickup';
+            else if (isConditional) activeStyle = 'conditional';
+            else activeStyle = 'shipped';
+        }
+
+        let dynamicStatuses = [];
+        if (activeStyle === 'pickup') {
+            dynamicStatuses = ["Pickup!", "In-store!", "Grab at store!", "Local pickup!"];
+        } else if (activeStyle === 'conditional') {
+            dynamicStatuses = ["Total!", "Right now!", "Final!", "For this!"];
+        } else {
+            dynamicStatuses = ["Shipped!", "To your door!", "Delivery included!", "On its way!"];
+        }
 
         const isAsLowAs = rLower.includes('as low as') || rLower.includes('starting at') || rLower.includes('cheapest');
         const selectedLowPrefixes = shuffleArray(["As low as", "Starting at", "From", "Dropping to"]).slice(0, 4);
@@ -968,8 +1022,8 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                     }
                 }
 
-                // 3. Title Placement Variance (25% Separate Line, 75% Attached)
-                let separateTitle = Math.random() < 0.25;
+                // 3. Title Placement Variance (70% Separate Line, 30% Attached for maximum entropy)
+                let separateTitle = Math.random() < 0.70;
                 let sep = titleSeparators[Math.floor(Math.random() * titleSeparators.length)];
                 let headerLines = [];
 
@@ -1005,11 +1059,22 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 
                 // Shuffle the Middle Block
                 middleBlock = middleBlock.sort(() => 0.5 - Math.random());
+
+                // V9.7.08 HORIZONTAL MERGE: Ensure clean punctuation between merged thoughts
+                if (middleBlock.length >= 2 && Math.random() > 0.5) {
+                    let firstPart = middleBlock[0].trim();
+                    // If the first thought has no ending punctuation, give it a clean period
+                    if (!/[.!?]$/.test(firstPart)) {
+                        firstPart += ".";
+                    }
+                    let combinedLine = firstPart + " " + middleBlock[1].trim();
+                    middleBlock.splice(0, 2, combinedLine);
+                }
                 
                 // 6. Combine them (Top Block always stays on top)
                 let rawLines = topBlock.concat(middleBlock);
 
-                // V9.6.80 PENULTIMATE POINTER SHUFFLE: Ultra-Paranoia Protocol
+                // V9.6.77 PENULTIMATE POINTER SHUFFLE: Ultra-Paranoia Protocol
                 if (ptrLine) {
                     // 50% chance to be absolute last, 50% chance to be second-to-last
                     if (Math.random() > 0.5 && rawLines.length > 1) {
@@ -1021,7 +1086,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                     }
                 }
 
-                let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
+                let emojifiedLines = injectEmojisV8(rawLines, 2, 4);
                 let postText = joinWithSpaceChaos(emojifiedLines, 2, 4);
                 
                 postOutputs.push(postText);
@@ -1043,7 +1108,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 let cloakedURL = cloakURL(extractedURL);
                 let finalLink = keepLead ? `${linkLead} ${cloakedURL}` : cloakedURL;
 
-                // V9.6.80 COMMENT GEOMETRY LOCK: Never put the link on Line 1
+                // V9.6.76 COMMENT GEOMETRY LOCK: Never put the link on Line 1
                 let rawLines = [];
                 let textElements = [];
                 
@@ -1054,7 +1119,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 textElements = textElements.sort(() => 0.5 - Math.random());
                 
                 if (textElements.length === 0) {
-                    // V9.6.80 FALLBACK VARIANCE: Randomize the safety net to prevent footprinting
+                    // V9.6.78 FALLBACK VARIANCE: Randomize the safety net to prevent footprinting
                     const fallbackPhrases = [
                         "Dropping the details right here:",
                         "I left the info right here:",
@@ -1083,7 +1148,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                     }
                 }
                 
-                let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
+                let emojifiedLines = injectEmojisV8(rawLines, 1, 2);
                 
                 // V9.4.81: Comment Chaos (Randomizes line breaks instead of hardcoding \n\n)
                 let cText = joinWithSpaceChaos(emojifiedLines, 1, 3);
@@ -1129,7 +1194,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 
                 let rawLines = [assembledLine.trim()];
                 
-                let emojifiedLines = injectEmojisV8(rawLines, 1, 3);
+                let emojifiedLines = injectEmojisV8(rawLines, 1, 2);
                 let postText = emojifiedLines[0];
                 
                 postOutputs.push(postText);
@@ -1204,7 +1269,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                     rawLines.splice(randIdx, 0, customText);
                 }
 
-                let emojifiedLines = injectEmojisV8(rawLines, 3, 6);
+                let emojifiedLines = injectEmojisV8(rawLines, 1, 2);
                 let cText = joinWithSpaceChaos(emojifiedLines, 2, 4);
 
                 commentOutputs.push(cText);
@@ -1243,7 +1308,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
         let cloakedDtURL = cloakURL(extractedURL);
         let finalDtLink = dtLinkLead ? `${dtLinkLead} ${cloakedDtURL}` : cloakedDtURL;
         
-        // V9.6.80 DT BUFFER LOCK: Always place the human signoff above the link
+        // V9.6.75 DT BUFFER LOCK: Always place the human signoff above the link
         if(isOdd) {
             rawDtLines.push(dtHeader, dtSignoff, finalDtLink);
         } else {
@@ -1259,7 +1324,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             rawDtLines.splice(randIdxDT, 0, customTextDT);
         }
 
-        let emojifiedDtLines = injectEmojisV8(rawDtLines, 3, 5);
+        let emojifiedDtLines = injectEmojisV8(rawDtLines, 1, 3);
         let dtText = joinWithSpaceChaos(emojifiedDtLines, 2, 4);
 
         document.getElementById('out-dt').innerText = dtText;
