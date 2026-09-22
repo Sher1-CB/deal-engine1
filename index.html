@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Deal Generator v9.8.03</title>
+    <title>The CB Deal Generator v9.8.04</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -195,7 +195,7 @@
 
     <div class="right-col">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; margin-top: -30px;">
-            <span class="version-tag">v9.8.03</span>
+            <span class="version-tag">v9.8.04</span>
         </div>
         <div class="card">
             <div class="card-header" id="sessionBaseHeaderContainer">
@@ -314,10 +314,10 @@
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         document.getElementById('currentDay').value = days[new Date().getDay()];
         
-        fetchLiveModels(); // V9.8.03: Restored auto-fetch on load
+        fetchLiveModels(); // V9.8.04: Restored auto-fetch on load
     });
 
-    // V9.8.03: Dynamic Fetcher with Dual-Engine Support
+    // V9.8.04: Dynamic Fetcher with Dual-Engine Support & N-1 Stability
     async function fetchLiveModels() {
         const apiKey = document.getElementById('apiKey').value.trim() || localStorage.getItem('geminiApiKey');
         const select = document.getElementById('aiModel');
@@ -375,11 +375,17 @@
             
             loadOpenRouterModels(select);
 
-            // Smart Selection: Absolute newest Lite or Flash
-            if (liteModels.length > 0) {
+            // V9.8.04 SMART SELECTION: Pick N-1 Lite (2nd newest), fallback to N-1 Flash
+            if (liteModels.length > 1) {
+                select.value = liteModels[1]; // Grabs the 2nd newest Lite model
+            } else if (liteModels.length === 1) {
                 select.value = liteModels[0]; 
-            } else if (flashModels.length > 0) {
-                select.value = flashModels[0]; 
+            } else if (flashModels.length > 1) {
+                select.value = flashModels[1]; // Fallback: Grabs the 2nd newest Flash model
+            } else if (flashModels.length === 1) {
+                select.value = flashModels[0];
+            } else if (textModels.length > 0) {
+                select.value = textModels[0].name.replace('models/', ''); // Ultimate fallback
             }
             
         } catch (err) {
@@ -393,9 +399,10 @@
         const orGroup = document.createElement('optgroup');
         orGroup.label = "BACKUP (OpenRouter)";
         
+        // V9.8.04 FIX: Updated to the active Llama 3.1 free endpoint
         const llama = document.createElement('option');
-        llama.value = "openrouter:meta-llama/llama-3-8b-instruct:free";
-        llama.text = "Meta Llama 3 8B (100% FREE)";
+        llama.value = "openrouter:meta-llama/llama-3.1-8b-instruct:free";
+        llama.text = "Meta Llama 3.1 8B (100% FREE)";
         orGroup.appendChild(llama);
 
         const gpt = document.createElement('option');
@@ -764,7 +771,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             // V9.6.70: Manual Abort Controller
             currentAbortController = new AbortController();
 
-            // V9.8.03 DUAL-ENGINE ROUTER: Splits traffic based on selected model
+            // V9.8.04 DUAL-ENGINE ROUTER: Splits traffic based on selected model
             const engineType = selectedModel.split(':')[0]; // 'google' or 'openrouter'
             const actualModel = selectedModel.split(':')[1]; // The actual model name
             
