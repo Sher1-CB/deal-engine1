@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Deal Generator v9.8.04</title>
+    <title>The CB Deal Generator v9.8.05</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -99,11 +99,11 @@
                 <input type="password" id="apiKey" placeholder="Paste your AIzaSy... key here">
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
-                <a href="https://openrouter.ai/keys" target="_blank" class="api-link" style="color: #d93025;">🔗 Backup: OpenRouter API Key</a>
-                <input type="password" id="openRouterKey" placeholder="Paste your sk-or-v1... key here (Optional)">
+                <a href="https://console.groq.com/keys" target="_blank" class="api-link" style="color: #d93025;">🔗 Backup: Groq API Key (Free Llama 3.3)</a>
+                <input type="password" id="groqKey" placeholder="Paste your gsk_... key here (Optional)">
             </div>
         </div>
-
+        
         <div class="card">
             <div class="card-header">
                 <h3 style="color: var(--primary);">🔵 RAW INPUT WORKSPACE</h3>
@@ -195,7 +195,7 @@
 
     <div class="right-col">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; margin-top: -30px;">
-            <span class="version-tag">v9.8.04</span>
+            <span class="version-tag">v9.8.05</span>
         </div>
         <div class="card">
             <div class="card-header" id="sessionBaseHeaderContainer">
@@ -308,16 +308,16 @@
         const savedKey = localStorage.getItem('geminiApiKey');
         if(savedKey) document.getElementById('apiKey').value = savedKey;
         
-        const savedRouterKey = localStorage.getItem('openRouterApiKey');
-        if(savedRouterKey) document.getElementById('openRouterKey').value = savedRouterKey;
+        const savedGroqKey = localStorage.getItem('groqApiKey');
+        if(savedGroqKey) document.getElementById('groqKey').value = savedGroqKey;
         
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         document.getElementById('currentDay').value = days[new Date().getDay()];
         
-        fetchLiveModels(); // V9.8.04: Restored auto-fetch on load
+        fetchLiveModels(); 
     });
 
-    // V9.8.04: Dynamic Fetcher with Dual-Engine Support & N-1 Stability
+    // V9.8.05: Dynamic Fetcher with Dual-Engine Support & N-1 Stability
     async function fetchLiveModels() {
         const apiKey = document.getElementById('apiKey').value.trim() || localStorage.getItem('geminiApiKey');
         const select = document.getElementById('aiModel');
@@ -373,44 +373,38 @@
                 }
             });
             
-            loadOpenRouterModels(select);
+            loadGroqModels(select);
 
-            // V9.8.04 SMART SELECTION: Pick N-1 Lite (2nd newest), fallback to N-1 Flash
+            // V9.8.05 SMART SELECTION: Pick N-1 Lite (2nd newest), fallback to N-1 Flash
             if (liteModels.length > 1) {
-                select.value = liteModels[1]; // Grabs the 2nd newest Lite model
+                select.value = liteModels[1]; 
             } else if (liteModels.length === 1) {
                 select.value = liteModels[0]; 
             } else if (flashModels.length > 1) {
-                select.value = flashModels[1]; // Fallback: Grabs the 2nd newest Flash model
+                select.value = flashModels[1]; 
             } else if (flashModels.length === 1) {
                 select.value = flashModels[0];
             } else if (textModels.length > 0) {
-                select.value = textModels[0].name.replace('models/', ''); // Ultimate fallback
+                select.value = textModels[0].name.replace('models/', ''); 
             }
             
         } catch (err) {
             console.log("Google fetch failed, loading backups.");
             select.innerHTML = '';
-            loadOpenRouterModels(select);
+            loadGroqModels(select);
         }
     }
 
-    function loadOpenRouterModels(select) {
-        const orGroup = document.createElement('optgroup');
-        orGroup.label = "BACKUP (OpenRouter)";
+    function loadGroqModels(select) {
+        const groqGroup = document.createElement('optgroup');
+        groqGroup.label = "BACKUP (Groq - Ultra Fast)";
         
-        // V9.8.04 FIX: Updated to the active Llama 3.1 free endpoint
-        const llama = document.createElement('option');
-        llama.value = "openrouter:meta-llama/llama-3.1-8b-instruct:free";
-        llama.text = "Meta Llama 3.1 8B (100% FREE)";
-        orGroup.appendChild(llama);
+        const llama33 = document.createElement('option');
+        llama33.value = "groq:llama-3.3-70b-versatile";
+        llama33.text = "Meta Llama 3.3 70B (100% FREE)";
+        groqGroup.appendChild(llama33);
 
-        const gpt = document.createElement('option');
-        gpt.value = "openrouter:openai/gpt-4o-mini";
-        gpt.text = "OpenAI GPT-4o-Mini (Ultra-Reliable)";
-        orGroup.appendChild(gpt);
-
-        select.appendChild(orGroup);
+        select.appendChild(groqGroup);
     }
     
     function updateButtonText() {
@@ -771,7 +765,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             // V9.6.70: Manual Abort Controller
             currentAbortController = new AbortController();
 
-            // V9.8.04 DUAL-ENGINE ROUTER: Splits traffic based on selected model
+            // V9.8.05 DUAL-ENGINE ROUTER: Splits traffic based on selected model
             const engineType = selectedModel.split(':')[0]; // 'google' or 'openrouter'
             const actualModel = selectedModel.split(':')[1]; // The actual model name
             
@@ -800,16 +794,17 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 if(data.error) throw new Error(data.error.message);
                 aiText = data.candidates[0].content.parts[0].text;
 
-            } else if (engineType === 'openrouter') {
-                if(!openRouterKey) throw new Error("Please provide your OpenRouter API Key to use backup models!");
+            } else if (engineType === 'groq') {
+                const groqKey = document.getElementById('groqKey').value.trim();
+                if(groqKey) localStorage.setItem('groqApiKey', groqKey);
                 
-                response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                if(!groqKey) throw new Error("Please provide your Groq API Key to use backup models!");
+                
+                response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${openRouterKey}`,
-                        'HTTP-Referer': 'https://thecouponboutique.com',
-                        'X-Title': 'CB Deal Generator'
+                        'Authorization': `Bearer ${groqKey}`
                     },
                     signal: currentAbortController.signal,
                     body: JSON.stringify({
