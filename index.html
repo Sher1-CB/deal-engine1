@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Deal Generator v9.8.06</title>
+    <title>The CB Deal Generator v9.8.08</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -195,7 +195,7 @@
 
     <div class="right-col">
         <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; margin-top: -30px;">
-            <span class="version-tag">v9.8.06</span>
+            <span class="version-tag">v9.8.08</span>
         </div>
         <div class="card">
             <div class="card-header" id="sessionBaseHeaderContainer">
@@ -317,7 +317,7 @@
         fetchLiveModels(); 
     });
 
-    // V9.8.06: Dynamic Fetcher with Dual-Engine Support & N-1 Stability
+    // V9.8.08: Dynamic Fetcher with Dual-Engine Support & N-1 Stability
     async function fetchLiveModels() {
         const apiKey = document.getElementById('apiKey').value.trim() || localStorage.getItem('geminiApiKey');
         const select = document.getElementById('aiModel');
@@ -375,7 +375,7 @@
             
             loadGroqModels(select);
 
-            // V9.8.06 SMART SELECTION: Pick N-1 Lite (2nd newest), fallback to N-1 Flash
+            // V9.8.08 SMART SELECTION: Pick N-1 Lite (2nd newest), fallback to N-1 Flash
             if (liteModels.length > 1) {
                 select.value = liteModels[1]; 
             } else if (liteModels.length === 1) {
@@ -776,7 +776,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             // V9.6.70: Manual Abort Controller
             currentAbortController = new AbortController();
 
-            // V9.8.06 DUAL-ENGINE ROUTER: Splits traffic based on selected model
+            // V9.8.08 DUAL-ENGINE ROUTER: Splits traffic based on selected model
             const engineType = selectedModel.split(':')[0]; // 'google' or 'openrouter'
             const actualModel = selectedModel.split(':')[1]; // The actual model name
             
