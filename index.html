@@ -399,10 +399,21 @@
         const groqGroup = document.createElement('optgroup');
         groqGroup.label = "BACKUP (Groq - Ultra Fast)";
         
+        // V9.8.08 TRIPLE REDUNDANCY: Hardcodes Groq's top 3 free models to prevent endpoint outages
         const llama33 = document.createElement('option');
-        llama33.value = "groq:llama-3.3-70b-versatile";
-        llama33.text = "Meta Llama 3.3 70B (100% FREE)";
+        llama33.value = "groq:llama-3.3-70b-specdec";
+        llama33.text = "Meta Llama 3.3 70B (Primary Backup)";
         groqGroup.appendChild(llama33);
+
+        const llama31 = document.createElement('option');
+        llama31.value = "groq:llama-3.1-8b-instant";
+        llama31.text = "Meta Llama 3.1 8B (Secondary Backup)";
+        groqGroup.appendChild(llama31);
+
+        const mixtral = document.createElement('option');
+        mixtral.value = "groq:mixtral-8x7b-32768";
+        mixtral.text = "Mixtral 8x7B (Emergency Backup)";
+        groqGroup.appendChild(mixtral);
 
         select.appendChild(groqGroup);
     }
