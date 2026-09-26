@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Command Center v10.0.1</title>
+    <title>The CB Command Center v10.0.2</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -56,7 +56,7 @@
         .btn-danger:hover { background: var(--danger); color: #fff; }
 
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
-        .col { flex: 1; min-width: 180px; }
+        .col { flex: 1; min-width: 150px; }
         
         /* API KEY RING */
         .api-ring { background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 15px; }
@@ -81,6 +81,9 @@
         
         .copy-btn { background: #f8f9fa; color: var(--text-muted); border: 1px solid var(--border); padding: 4px 10px; font-size: 11px; border-radius: 4px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px; margin: 0;}
         .copy-btn:hover { background: #e8eaed; color: var(--primary); border-color: var(--primary); }
+        
+        .raw-output-btn { background: #f8f9fa; color: var(--text-main); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .raw-output-btn:hover { background: #e8eaed; }
 
         .history-list { max-height: 500px; overflow-y: auto; padding-right: 5px;}
         .history-card { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-left: 4px solid var(--primary);}
@@ -102,7 +105,7 @@
             <p>Polymorphic Engine & Shift Manager</p>
         </div>
     </div>
-    <span class="version-tag">v10.0.1</span>
+    <span class="version-tag">v10.0.2</span>
 </div>
 
 <!-- V10 SEQUENCE & ROUTING BANNER -->
@@ -166,6 +169,13 @@
                     </select>
                 </div>
                 <div class="col">
+                    <label>🗣️ Pronoun Style</label>
+                    <select id="pronounStyle">
+                        <option value="subject">1st Person (I / My / We)</option>
+                        <option value="possessive">3rd Person (This / That / It)</option>
+                    </select>
+                </div>
+                <div class="col">
                     <label>🔢 Deal Sequence #</label>
                     <select id="dealNumber" onchange="updateRoutingBanner()">
                         <option value="1">Deal 1</option>
@@ -176,14 +186,6 @@
                         <option value="6">Deal 6</option>
                         <option value="7">Deal 7</option>
                         <option value="8">Deal 8</option>
-                    </select>
-                </div>
-            </div>
-                <div class="col">
-                    <label>🗣️ Pronoun Style</label>
-                    <select id="pronounStyle">
-                        <option value="subject">1st Person (I / My / We)</option>
-                        <option value="possessive">3rd Person (This / That / It)</option>
                     </select>
                 </div>
             </div>
@@ -220,6 +222,7 @@
     <div class="card">
         <div class="card-header">
             <h3 style="color: var(--success);">✅ POLYMORPHIC OUTPUT GENERATED</h3>
+            <button class="raw-output-btn" onclick="copyRawOutput(this)">📄 Copy Raw Output</button>
         </div>
         
         <div class="output-layout">
@@ -289,12 +292,11 @@
 <script>
     let sessionHistory = []; 
     let dealCount = 0;
-    let globalDealHistory = []; // Cloud memory
+    let globalDealHistory = []; 
+    let currentRawOutput = ""; 
 
-    // YOUR GOOGLE SHEET API URL
     const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbz2afSYMMGUg-BCdMiiXZskBjlt-j5nq1smwF0-LDlVwn1YOpsWzC-DIaJQxnbVIwW7mg/exec";
 
-    // V10 ROUTING ENGINE LOGIC
     const routingPatterns = [
         { acct: "ACCOUNT 1", color: "route-acct1", text: "Start with DAILY THREAD ➔ Then Groups 1, 2, 3" },
         { acct: "ACCOUNT 2", color: "route-acct2", text: "Start with GROUP 1 ➔ Then Groups 2, 3, Daily Thread" },
@@ -309,10 +311,9 @@
         });
         updateRoutingBanner();
         fetchCloudHistory(); 
-        fetchLiveModels(); // ADD THIS LINE BACK
+        fetchLiveModels(); 
     });
 
-    // V10 RESTORED: Dynamic Model Selector (N-2 Lite Logic)
     async function fetchLiveModels() {
         const key = document.getElementById('key1').value.trim() || document.getElementById('key2').value.trim();
         const select = document.getElementById('aiModel');
@@ -338,7 +339,6 @@
                 if (modelId.includes('lite')) liteModels.push(modelId);
             });
             
-            // Auto-select 3rd newest Lite model for maximum free-tier stability
             if (liteModels.length > 2) select.value = liteModels[2];
             else if (liteModels.length > 0) select.value = liteModels[0];
             else if (textModels.length > 0) select.value = textModels[0].name.replace('models/', '');
@@ -347,14 +347,12 @@
         }
     }
 
-    // V10 CLOUD SYNC: Fetch team history from Google Sheets
     async function fetchCloudHistory() {
         try {
             const response = await fetch(GOOGLE_SHEET_API);
             globalDealHistory = await response.json();
-            console.log("Cloud Database Synced:", globalDealHistory.length, "deals loaded.");
         } catch (e) {
-            console.log("Cloud sync failed. Operating on local memory.", e);
+            console.log("Cloud sync failed.", e);
         }
     }
 
@@ -375,11 +373,10 @@
         document.getElementById('duplicateWarning').style.display = 'none';
         document.getElementById('priceWarning').style.display = 'none';
         document.getElementById('outputSection').style.display = 'none';
-        document.getElementById('v7FallbackBtn').style.display = 'none'; // V10.0.1: Hide emergency button on clear
+        document.getElementById('v7FallbackBtn').style.display = 'none';
         fetchCloudHistory(); 
     }
 
-    // V10 URL CLOAKER (Multi-Vector Sharding)
     function extractURL(text) {
         const urlRegex = /(https?:\/\/[^\s]+[^.,;:?!"'\s\)])/g;
         const match = text.match(urlRegex);
@@ -409,7 +406,23 @@
         }
     }
 
-    // V10 EXPONENTIAL BACKOFF & KEY RING FETCH (PATCHED)
+    function joinWithSpaceChaos(linesArray, minBlank, maxBlank) {
+        if (!linesArray || linesArray.length === 0) return "";
+        if (linesArray.length === 1) return linesArray[0];
+        let numGaps = linesArray.length - 1;
+        let maxPossible = Math.min(maxBlank, numGaps);
+        let minPossible = Math.min(minBlank, maxPossible);
+        let numDoubleSpaces = Math.floor(Math.random() * (maxPossible - minPossible + 1)) + minPossible;
+        let numSingleSpaces = numGaps - numDoubleSpaces;
+        let separators = [];
+        for(let i=0; i<numDoubleSpaces; i++) separators.push(Math.random() > 0.85 ? '\n\n\n' : '\n\n'); 
+        for(let i=0; i<numSingleSpaces; i++) separators.push('\n');
+        separators = separators.sort(() => 0.5 - Math.random());
+        let result = linesArray[0];
+        for(let i=0; i<numGaps; i++) result += separators[i] + linesArray[i+1];
+        return result;
+    }
+
     async function fetchWithRetry(promptText, selectedModel) {
         const keys = [
             document.getElementById('key1').value.trim(),
@@ -450,7 +463,7 @@
 
                 } catch (err) {
                     lastError = err.message;
-                    if (err.message.includes("API key not valid")) throw err; // Hard stop for bad keys
+                    if (err.message.includes("API key not valid")) throw err; 
                     retries--;
                     if (retries > 0) {
                         console.log(`Key ${i+1} failed. Retrying...`);
@@ -475,7 +488,6 @@
             localStorage.setItem(`cb_${id}`, document.getElementById(id).value.trim());
         });
 
-        // V10 CLOUD DUPLICATE GUARD
         const extractedURL = extractURL(rawText);
         const duplicateRecord = globalDealHistory.find(row => row[3] === extractedURL);
         
@@ -489,14 +501,15 @@
         btn.innerHTML = "⏳ Compiling Polymorphic Engine...";
         btn.disabled = true;
         document.getElementById('priceWarning').style.display = 'none';
+        currentRawOutput = ""; 
 
         let pronounInstruction = pronounStyle === "subject" 
             ? "Use 1st Person pronouns (I, My, We, Our)." 
             : "Use 3rd Person pronouns (This, That, It). NEVER use I, My, We, or Our.";
 
-        // V10 DATA-SECURED POLYMORPHIC PROMPT
         const prompt = `Analyze this deal: "${rawText}"
 Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double quotes.
+"retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart". Fix leetspeak.),
 "sale_price": (String. Extract the sale price. Extract ONLY numbers and $ signs. If none, write "???"),
 "reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". If none, write "NONE"),
 "cleaned_title": (String. Copy the primary product name exactly. Remove emojis.),
@@ -508,16 +521,17 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
 ),
 "b5_verification": (String. Extract retailer-specific shipping/pickup rules like 'Walmart+ or $35 order', 'Walgreens Pickup'. Ignore basic 'Free Shipping'. If none, write "NONE"),
 "b8_verification": (String. Extract S&S, Subscribe & Save, or Promo Codes. If none, write "NONE"),
-"post_variations": (Array of 3 strings. You are a polymorphic text engine. You MUST take the sale_price, reg_price, cleaned_title, AND EVERY SINGLE FACT extracted in b2, b5, and b8, and weave them naturally into a fluid, casual paragraph. Do NOT use rigid hyphens or bullet points. PRONOUNS: ${pronounInstruction} SLANG RULE: Use casual text-speak (ngl, tbh, lowkey, rn) in EXACTLY TWO of the strings. The remaining ONE string MUST be clean with zero slang. BANNED WORDS: Sale, Discount, Price, Cost, Checkout, Buy. Make each of the 3 paragraphs structurally different.),
+"post_variations": (Array of 3 strings. You are a polymorphic text engine. You MUST take the sale_price, reg_price, cleaned_title, retailer_name, AND EVERY SINGLE FACT extracted in b2, b5, and b8, and weave them naturally into a fluid, casual paragraph. Do NOT use rigid hyphens or bullet points. PRONOUNS: ${pronounInstruction} SLANG RULE: Use casual text-speak (ngl, tbh, lowkey, rn) in EXACTLY TWO of the strings. The remaining ONE string MUST be clean with zero slang. Make each of the 3 paragraphs structurally different.),
 "comments": (Array of 3 strings. Write a casual comment. You MUST include the exact placeholder "[URL]" naturally inside the sentence (e.g., 'Found it right here [URL] and it looks great'). You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments.),
-"daily_thread": (String. Weave the price, title, all extracted facts (b2, b5, b8), and the exact placeholder "[URL]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title.)`;
+"daily_thread": (String. Weave the price, title, retailer_name, all extracted facts, and the exact placeholder "[URL]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title.),
+"emoji_pool": (Array of 10 literal Unicode emoji characters highly specific to the product. Do NOT use commercial/money emojis.)
+GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Sold out, Miss out, Rare, Exclusive, Restock, Gone, Run, Grab it now, Like, Share, Tag, Comment, React, Vote, Link, URL, Website, Click, Tap, Bio, DM, Alert, Shocking, Mind-blowing, Secret, Hack, viral, Game changer, Stock, Inventory.`;
 
         try {
             const selectedModel = document.getElementById('aiModel').value;
             const data = await fetchWithRetry(prompt, selectedModel);
             let aiText = data.candidates[0].content.parts[0].text;
             
-            // V9.7.37 NUCLEAR SANITIZER
             aiText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
             const startIndex = aiText.indexOf('{');
             const endIndex = aiText.lastIndexOf('}');
@@ -532,36 +546,52 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
             
             const aiData = JSON.parse(aiText);
 
-            // V10 SMART PRICE VALIDATOR
             const cleanAiPrice = aiData.sale_price.replace('$', '').trim();
             if (cleanAiPrice !== "???" && !rawText.includes(cleanAiPrice)) {
                 document.getElementById('priceWarning').style.display = 'flex';
             }
 
-            // RENDER OUTPUTS & REPLACE [URL] PLACEHOLDERS
+            const emojis = aiData.emoji_pool && aiData.emoji_pool.length > 0 ? aiData.emoji_pool : ["✨","🔥","📦","👇","🌿"];
+            const getEmoji = () => emojis[Math.floor(Math.random() * emojis.length)];
+
+            currentRawOutput += `=== PHASE 0: TARGET LOCK ===\n[DEAL: ${document.getElementById('dealNumber').value} | POSTER: ${posterName}]\n${rawText}\n\n`;
+
             for(let i=0; i<3; i++) {
-                document.getElementById(`out-post${i+1}`).innerText = aiData.post_variations[i];
-                document.getElementById(`out-post${i+1}`).setAttribute('data-raw', aiData.post_variations[i]);
+                let postLines = aiData.post_variations[i].split(/(?<=[.!?])\s+/); 
+                let emojifiedPost = postLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
+                let finalPost = joinWithSpaceChaos(emojifiedPost, 1, 2);
+                
+                document.getElementById(`out-post${i+1}`).innerText = finalPost;
+                document.getElementById(`out-post${i+1}`).setAttribute('data-raw', finalPost);
+                currentRawOutput += `=== POST VARIATION ${i+1} ===\n${finalPost}\n\n`;
                 
                 let cloaked = cloakURL(extractedURL);
                 let commentText = aiData.comments[i].replace('[URL]', cloaked);
-                document.getElementById(`out-com${i+1}`).innerText = commentText;
-                document.getElementById(`out-com${i+1}`).setAttribute('data-raw', commentText);
+                let commentLines = commentText.split(/(?<=[.!?])\s+/);
+                let emojifiedComment = commentLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
+                let finalComment = joinWithSpaceChaos(emojifiedComment, 1, 2);
+
+                document.getElementById(`out-com${i+1}`).innerText = finalComment;
+                document.getElementById(`out-com${i+1}`).setAttribute('data-raw', finalComment);
+                currentRawOutput += `=== COMMENT ${i+1} ===\n${finalComment}\n\n`;
             }
 
             let dtCloaked = cloakURL(extractedURL);
             let dtText = aiData.daily_thread.replace('[URL]', dtCloaked);
-            document.getElementById('out-dt').innerText = dtText;
-            document.getElementById('out-dt').setAttribute('data-raw', dtText);
+            let dtLines = dtText.split(/(?<=[.!?])\s+/);
+            let emojifiedDt = dtLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
+            let finalDt = joinWithSpaceChaos(emojifiedDt, 1, 2);
+
+            document.getElementById('out-dt').innerText = finalDt;
+            document.getElementById('out-dt').setAttribute('data-raw', finalDt);
+            currentRawOutput += `=== DAILY THREAD COMMENT ===\n${finalDt}\n\n`;
 
             document.getElementById('outputSection').style.display = "block";
 
-            // V10 SHIFT LEDGER LOGGING
             if (!isTestMode) {
                 dealCount++;
                 const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
-                // Log to local UI
                 const historyLog = document.getElementById('historyLog');
                 if(document.getElementById('emptyHistory')) document.getElementById('emptyHistory').remove();
                 const historyCard = `
@@ -573,27 +603,20 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
                 historyLog.innerHTML = historyCard + historyLog.innerHTML;
                 document.getElementById('sessionBaseHeader').innerText = `📚 SHIFT LEDGER (${dealCount})`;
 
-                // PUSH TO GOOGLE SHEETS CLOUD
                 fetch(GOOGLE_SHEET_API, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        poster: posterName,
-                        title: aiData.cleaned_title,
-                        url: extractedURL
-                    })
+                    body: JSON.stringify({ poster: posterName, title: aiData.cleaned_title, url: extractedURL })
                 }).catch(err => console.log("Cloud save error", err));
 
-                // Auto-increment deal number
                 let currentNum = parseInt(document.getElementById('dealNumber').value);
                 document.getElementById('dealNumber').value = currentNum < 8 ? currentNum + 1 : 1;
                 updateRoutingBanner();
             }
 
-       } catch (error) {
+        } catch (error) {
             alert("Engine Error: " + error.message);
-            // V10.0.1: Unhide the V7 Fallback button ONLY on hard failure
             document.getElementById('v7FallbackBtn').style.display = "flex";
         } finally {
             btn.innerHTML = "✨ Generate Deal";
@@ -601,18 +624,18 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
         }
     }
 
-    function copyToClipboard(elementId, btnElement) {
-        const textToCopy = document.getElementById(elementId).getAttribute('data-raw');
-        navigator.clipboard.writeText(textToCopy).then(() => {
+    function copyRawOutput(btnElement) {
+        if(!currentRawOutput) { alert("No output generated yet!"); return; }
+        navigator.clipboard.writeText(currentRawOutput).then(() => {
             const originalText = btnElement.innerText;
-            btnElement.innerText = "✅ Copied!";
+            btnElement.innerText = "✅ Copied Raw Output!";
             btnElement.style.background = "#e6f4ea";
             btnElement.style.color = "#00a400";
             btnElement.style.borderColor = "#00a400";
             setTimeout(() => { 
                 btnElement.innerText = originalText; 
                 btnElement.style.background = "#f8f9fa"; 
-                btnElement.style.color = "var(--text-muted)";
+                btnElement.style.color = "var(--text-main)";
                 btnElement.style.borderColor = "var(--border)";
             }, 2000);
         });
