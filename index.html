@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Command Center v10.0.6</title>
+    <title>The CB Command Center v10.0.7</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -110,7 +110,7 @@
             <p>Polymorphic Engine & Shift Manager</p>
         </div>
     </div>
-    <span class="version-tag">v10.0.6</span>
+    <span class="version-tag">v10.0.7</span>
 </div>
 
 <!-- V10 SEQUENCE & ROUTING BANNER -->
@@ -605,9 +605,15 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
 
         try {
             const selectedModel = document.getElementById('aiModel').value;
+            
+            // V10.0.7 MODEL SAFETY LOCK: Prevents sending junk model names to Google
+            if (selectedModel.includes("⚠️") || selectedModel.includes("⏳")) {
+                throw new Error("Invalid AI Model. Please click the '🔄 Refresh' button next to the AI Model dropdown to load the models.");
+            }
+
             const data = await fetchWithRetry(prompt, selectedModel);
             let aiText = data.candidates[0].content.parts[0].text;
-            
+                        
             aiText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
             const startIndex = aiText.indexOf('{');
             const endIndex = aiText.lastIndexOf('}');
