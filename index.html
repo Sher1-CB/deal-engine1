@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Command Center v10.0.8</title>
+    <title>The CB Command Center v10.0.35</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -18,6 +18,7 @@
             --danger: #fa383e;
             --acct1: #1877f2;
             --acct2: #00a400;
+            --acct3: #8a2be2;
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 15px; }
@@ -33,6 +34,7 @@
         .routing-banner { max-width: 1200px; margin: 0 auto 15px auto; padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 15px; color: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;}
         .route-acct1 { background: linear-gradient(135deg, var(--acct1), #0b51c5); }
         .route-acct2 { background: linear-gradient(135deg, var(--acct2), #007a00); }
+        .route-acct3 { background: linear-gradient(135deg, var(--acct3), #4b0082); }
         .shuffle-route-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s;}
         .shuffle-route-btn:hover { background: rgba(255,255,255,0.4); }
 
@@ -47,6 +49,7 @@
         textarea, input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: #f8f9fa; color: var(--text-main); font-family: inherit; box-sizing: border-box; font-size: 13px; transition: border 0.2s; }
         textarea:focus, input:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
         textarea { height: 100px; resize: vertical; }
+        .small-textarea { height: 60px; }
         
         button { background: var(--primary); color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; font-weight: 600; font-size: 13px; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
         button:hover { background: var(--primary-hover); box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
@@ -65,11 +68,13 @@
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
         .col { flex: 1; min-width: 150px; }
         
+        /* API KEY RING */
         .api-ring { background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 15px; }
         .api-ring-header { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between;}
         .api-inputs { display: flex; gap: 10px; }
         .api-inputs input { padding: 6px 10px; font-size: 12px; }
 
+        /* WARNING BANNERS */
         .alert-banner { display: none; padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 15px; align-items: center; gap: 8px; }
         .alert-warning { background: #fff8e1; border: 1px solid #fbbc04; color: #b06000; }
         .alert-danger { background: #fce8e6; border: 1px solid #ea4335; color: #c5221f; }
@@ -110,7 +115,7 @@
             <p>Polymorphic Engine & Shift Manager</p>
         </div>
     </div>
-    <span class="version-tag">v10.0.8</span>
+    <span class="version-tag">v10.0.35</span>
 </div>
 
 <!-- V10 SEQUENCE & ROUTING BANNER -->
@@ -145,9 +150,7 @@
             </div>
             
             <!-- V10 WARNING BANNERS -->
-            <div id="duplicateWarning" class="alert-banner alert-warning">
-                <span>⚠️</span> <strong>URL Collision:</strong> This link was already generated in this session!
-            </div>
+            <div id="duplicateWarning" class="alert-banner alert-warning"></div>
             <div id="priceWarning" class="alert-banner alert-danger">
                 <span>🚨</span> <strong>Price Audit:</strong> AI generated a price not found in the raw text. Verify before posting!
             </div>
@@ -155,7 +158,9 @@
             <label>Raw Deal Context Text</label>
             <textarea id="rawText" placeholder="Paste raw deal information here..."></textarea>
             
-            <!-- V10.0.3 RESTORED: Deal Type & Fulfillment -->
+            <label>✍️ Custom Injection Line (Optional)</label>
+            <textarea id="customLine" class="small-textarea" placeholder="Type a personal review, joke, or custom instruction here..."></textarea>
+            
             <div class="row" style="margin-top: 15px;">
                 <div class="col">
                     <label>🚨 Deal Type</label>
@@ -169,9 +174,9 @@
                     <label>🚚 Fulfillment Style</label>
                     <select id="fulfillmentStyle">
                         <option value="auto" selected>Auto-Detect (Default)</option>
-                        <option value="shipped">Force: Shipped!</option>
-                        <option value="pickup">Force: Pickup / In-Store!</option>
-                        <option value="conditional">Force: Total! (Thresholds)</option>
+                        <option value="shipped">Force: Shipped</option>
+                        <option value="pickup">Force: Pickup / In-Store</option>
+                        <option value="conditional">Force: Total (Thresholds)</option>
                     </select>
                 </div>
             </div>
@@ -200,6 +205,16 @@
                     <select id="pronounStyle">
                         <option value="subject">1st Person (I / My / We)</option>
                         <option value="possessive">3rd Person (This / That / It)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row" style="margin-top: 15px;">
+                <div class="col">
+                    <label>🔄 Account Rotation</label>
+                    <select id="acctRotation" onchange="updateRoutingBanner()">
+                        <option value="2">2 Accounts</option>
+                        <option value="3">3 Accounts</option>
                     </select>
                 </div>
                 <div class="col">
@@ -249,7 +264,10 @@
     <div class="card">
         <div class="card-header">
             <h3 style="color: var(--success);">✅ POLYMORPHIC OUTPUT GENERATED</h3>
-            <button class="raw-output-btn" onclick="copyRawOutput(this)">📄 Copy Raw Output</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-outline btn-danger" onclick="reportIssue(this)">🐞 Report Issue</button>
+                <button class="raw-output-btn" onclick="copyRawOutput(this)">📄 Copy Raw Output</button>
+            </div>
         </div>
         
         <div class="output-layout">
@@ -322,23 +340,89 @@
     let globalDealHistory = []; 
     let currentRawOutput = ""; 
 
+    // YOUR GOOGLE APPS SCRIPT WEB APP URL
     const GOOGLE_SHEET_API = "https://script.google.com/macros/s/AKfycbz2afSYMMGUg-BCdMiiXZskBjlt-j5nq1smwF0-LDlVwn1YOpsWzC-DIaJQxnbVIwW7mg/exec";
 
-    const routingPatterns = [
-        { acct: "ACCOUNT 1", color: "route-acct1", text: "Start with DAILY THREAD ➔ Then Groups 1, 2, 3" },
-        { acct: "ACCOUNT 2", color: "route-acct2", text: "Start with GROUP 1 ➔ Then Groups 2, 3, Daily Thread" },
-        { acct: "ACCOUNT 1", color: "route-acct1", text: "Start with GROUP 1 ➔ Then Groups 2, 3, Daily Thread" },
-        { acct: "ACCOUNT 2", color: "route-acct2", text: "Start with GROUP 2 ➔ Then Group 3, Daily Thread, Group 1" }
+    const routeOptions = [
+        "Start with DAILY THREAD ➔ Then Groups 1, 2, 3",
+        "Start with GROUP 1 ➔ Then Groups 2, 3, Daily Thread",
+        "Start with GROUP 2 ➔ Then Group 3, Daily Thread, Group 1",
+        "Start with GROUP 3 ➔ Then Daily Thread, Group 1, Group 2"
     ];
 
     document.addEventListener("DOMContentLoaded", () => {
-        ['key1', 'key2', 'key3', 'posterName'].forEach(id => {
+        ['key1', 'key2', 'key3', 'posterName', 'acctRotation'].forEach(id => {
             const saved = localStorage.getItem(`cb_${id}`);
             if(saved) document.getElementById(id).value = saved;
         });
-        randomizeRoute(); // V10.0.5: Auto-shuffles the route the moment the app opens
+        randomizeRoute(); 
         fetchCloudHistory(); 
         fetchLiveModels(); 
+    });
+
+    // V10.0.33 7-DAY UNIQUE LINK GUARD & SAME-DAY TITLE CHECKER
+    function checkDuplicates(text) {
+        const dupWarning = document.getElementById('duplicateWarning');
+        if(!text) { dupWarning.style.display = 'none'; return false; }
+        
+        let extractedURL = extractURL(text).replace(/\/$/, ''); 
+        if(extractedURL === "https://thecouponboutique.com") return false;
+
+        const todayET = new Date().toLocaleDateString("en-US", {timeZone: "America/New_York"});
+        const textLower = text.toLowerCase();
+        
+        let foundUrlMatch = null;
+        let foundTitleMatchToday = null;
+
+        for (let i = 0; i < globalDealHistory.length; i++) {
+            let row = globalDealHistory[i];
+            if (!row[0] || !row[2] || !row[3]) continue;
+            
+            let rowUrl = row[3].replace(/\/$/, '');
+            let rowTitle = row[2];
+            let rowDateString = "";
+            let isToday = false;
+
+            try {
+                rowDateString = new Date(row[0]).toLocaleDateString("en-US", {timeZone: "America/New_York"});
+                isToday = (rowDateString === todayET);
+            } catch(e) {}
+
+            if (rowUrl === extractedURL) {
+                foundUrlMatch = { poster: row[1], timestamp: row[0] };
+                break; 
+            }
+            
+            if (isToday && textLower.includes(rowTitle.toLowerCase())) {
+                foundTitleMatchToday = { poster: row[1], title: rowTitle };
+            }
+        }
+
+        const sessionUrlMatch = sessionHistory.find(deal => deal.url.replace(/\/$/, '') === extractedURL);
+        const sessionTitleMatch = sessionHistory.find(deal => textLower.includes(deal.title.toLowerCase()));
+
+        if (foundUrlMatch || sessionUrlMatch) {
+            let poster = foundUrlMatch ? foundUrlMatch.poster : "You (Session)";
+            let when = foundUrlMatch ? foundUrlMatch.timestamp : "earlier in this session";
+            dupWarning.innerHTML = `<span>🚨</span> <div><strong>DUPLICATE LINK DETECTED:</strong> This exact link was already posted on <strong>${when}</strong> by <strong>${poster}</strong>! (7-Day Memory)</div>`;
+            dupWarning.className = "alert-banner alert-danger";
+            dupWarning.style.display = 'flex';
+            return true;
+        } else if (foundTitleMatchToday || sessionTitleMatch) {
+            let poster = foundTitleMatchToday ? foundTitleMatchToday.poster : "You (Session)";
+            let title = foundTitleMatchToday ? foundTitleMatchToday.title : sessionTitleMatch.title;
+            dupWarning.innerHTML = `<span>⚠️</span> <div><strong>SAME TITLE TODAY:</strong> The title "<em>${title}</em>" was already used today by <strong>${poster}</strong>. You can still continue to generate this deal.</div>`;
+            dupWarning.className = "alert-banner alert-warning";
+            dupWarning.style.display = 'flex';
+            return true;
+        } else {
+            dupWarning.style.display = 'none';
+            return false;
+        }
+    }
+
+    document.getElementById('rawText').addEventListener('input', function() {
+        checkDuplicates(this.value.trim());
     });
 
     function setDealType(type) {
@@ -389,6 +473,9 @@
         try {
             const response = await fetch(GOOGLE_SHEET_API);
             globalDealHistory = await response.json();
+            if (typeof checkDuplicates === "function") {
+                checkDuplicates(document.getElementById('rawText').value.trim());
+            }
         } catch (e) {
             console.log("Cloud sync failed.", e);
         }
@@ -396,26 +483,35 @@
 
     function updateRoutingBanner() {
         const num = parseInt(document.getElementById('dealNumber').value);
-        const patternIndex = (num - 1) % 4; 
-        const pattern = routingPatterns[patternIndex];
+        const rotation = parseInt(document.getElementById('acctRotation').value);
+        
+        let acctNum = ((num - 1) % rotation) + 1;
+        let randomRoute = routeOptions[Math.floor(Math.random() * routeOptions.length)];
         
         const banner = document.getElementById('routingBanner');
         const text = document.getElementById('routingText');
         
-        banner.className = `routing-banner ${pattern.color}`;
-        text.innerHTML = `DEAL ${num}: [${pattern.acct}] ➔ ${pattern.text}`;
+        if(acctNum === 1) banner.className = `routing-banner route-acct1`;
+        else if(acctNum === 2) banner.className = `routing-banner route-acct2`;
+        else banner.className = `routing-banner route-acct3`;
+        
+        text.innerHTML = `DEAL ${num}: [ACCOUNT ${acctNum}] ➔ ${randomRoute}`;
+        banner.setAttribute('data-acct', acctNum);
     }
 
     function randomizeRoute() {
-        const pattern = routingPatterns[Math.floor(Math.random() * routingPatterns.length)];
         const banner = document.getElementById('routingBanner');
         const text = document.getElementById('routingText');
-        banner.className = `routing-banner ${pattern.color}`;
-        text.innerHTML = `🔀 RANDOM: [${pattern.acct}] ➔ ${pattern.text}`;
+        const acctNum = banner.getAttribute('data-acct') || "1";
+        const num = document.getElementById('dealNumber').value;
+        
+        let randomRoute = routeOptions[Math.floor(Math.random() * routeOptions.length)];
+        text.innerHTML = `DEAL ${num}: [ACCOUNT ${acctNum}] ➔ ${randomRoute}`;
     }
 
     function clearWorkspace() {
         document.getElementById('rawText').value = '';
+        document.getElementById('customLine').value = '';
         document.getElementById('duplicateWarning').style.display = 'none';
         document.getElementById('priceWarning').style.display = 'none';
         document.getElementById('outputSection').style.display = 'none';
@@ -480,7 +576,7 @@
 
         const payload = {
             contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: { temperature: 0.6 },
+            generationConfig: { temperature: 0.65 },
             safetySettings: [
                 { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
                 { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
@@ -532,38 +628,11 @@
 
         if(!rawText) { alert("Please provide Raw Text!"); return; }
         
-        ['key1', 'key2', 'key3', 'posterName'].forEach(id => {
+        ['key1', 'key2', 'key3', 'posterName', 'acctRotation'].forEach(id => {
             localStorage.setItem(`cb_${id}`, document.getElementById(id).value.trim());
         });
 
-        // V10.0.8 DUAL-LAYER DUPLICATE GUARD (Session + Cloud Same-Day ET)
-        const extractedURL = extractURL(rawText);
-        const dupWarning = document.getElementById('duplicateWarning');
-        
-        // 1. Check Local Session (Did I just generate this?)
-        const sessionDuplicate = sessionHistory.find(deal => deal.url === extractedURL);
-        
-        // 2. Check Cloud (Did someone post this TODAY in Eastern Time?)
-        const todayET = new Date().toLocaleDateString("en-US", {timeZone: "America/New_York"});
-        const cloudDuplicate = globalDealHistory.find(row => {
-            if (row[3] !== extractedURL) return false;
-            try {
-                const rowDate = new Date(row[0]).toLocaleDateString("en-US", {timeZone: "America/New_York"});
-                return rowDate === todayET;
-            } catch(e) { return false; }
-        });
-
-        if (sessionDuplicate) {
-            dupWarning.innerHTML = `<span>🚨</span> <strong>SESSION COLLISION:</strong> You already generated this exact link in this current session!`;
-            dupWarning.className = "alert-banner alert-danger";
-            dupWarning.style.display = 'flex';
-        } else if (cloudDuplicate) {
-            dupWarning.innerHTML = `<span>⚠️</span> <strong>CLOUD COLLISION:</strong> This was already posted TODAY by <strong>${cloudDuplicate[1]}</strong>!`;
-            dupWarning.className = "alert-banner alert-warning";
-            dupWarning.style.display = 'flex';
-        } else {
-            dupWarning.style.display = 'none';
-        }
+        checkDuplicates(rawText);
 
         btn.innerHTML = "⏳ Compiling Polymorphic Engine...";
         btn.disabled = true;
@@ -574,7 +643,11 @@
             ? "Use 1st Person pronouns (I, My, We, Our)." 
             : "Use 3rd Person pronouns (This, That, It). NEVER use I, My, We, or Our.";
 
-        // V10.0.3 FULFILLMENT LOGIC
+        const customLine = document.getElementById('customLine').value.trim();
+        let customLineInstruction = customLine 
+            ? `"custom_line_rephrases": (Array of 4 strings. The user provided a custom injection line: "${customLine}". TASK: Scrub banned words and rephrase this specific line 4 unique ways. Do NOT change the meaning.),` 
+            : `"custom_line_rephrases": (Array of 4 strings. Write ["DEAD","DEAD","DEAD","DEAD"]),`;
+
         let rLower = rawText.toLowerCase();
         let activeStyle = fulfillmentChoice;
         if (activeStyle === 'auto') {
@@ -594,18 +667,20 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
 "reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". If none, write "NONE"),
 "cleaned_title": (String. Copy the primary product name exactly. Remove emojis.),
 "b2_verification": (JSON Object. Extract facts from the extra text. If none, write "NONE".
-  "limit": (String. MUST contain 'Limit' or 'Max' plus a number),
+  "limit": (String. MUST contain 'Limit' or 'Max' plus a number. ACRONYM SCRUB: Strip 'QTY'.),
   "variant": (String. Extract specific colors, models, or 'works on' phrases. Ignore S&S here.),
   "size": (String. Extract exact sizes/dimensions, e.g., '44"L x 19"W', 'S-XXL'),
   "math": (String. Extract per-item math, e.g., '$16.88 per jug')
 ),
 "b5_verification": (String. Extract retailer-specific shipping/pickup rules like 'Walmart+ or $35 order', 'Walgreens Pickup'. Ignore basic 'Free Shipping'. If none, write "NONE"),
 "b8_verification": (String. Extract S&S, Subscribe & Save, or Promo Codes. If none, write "NONE"),
-"post_variations": (Array of 3 strings. You are a polymorphic text engine. PRICE LOCK (ABSOLUTE): You MUST include the exact sale_price and reg_price in EVERY SINGLE paragraph. If you drop the price, the system will crash. You MUST weave the sale_price, reg_price, cleaned_title, retailer_name, AND EVERY SINGLE FACT extracted in b2, b5, and b8 naturally into a fluid, casual paragraph. Do NOT use rigid hyphens or bullet points. PRONOUNS: ${pronounInstruction} SLANG RULE: Use casual text-speak (ngl, tbh, lowkey, rn) in EXACTLY TWO of the strings. The remaining ONE string MUST be clean with zero slang. NUCLEAR BAN: You are STRICTLY FORBIDDEN from using the phrase 'game changer'. BANNED WORDS: Sale, Discount, Price, Cost, Checkout, Buy. Make each of the 3 paragraphs structurally different. You MUST write at least 3 distinct sentences per paragraph so they can be separated by line breaks.),
-"comments": (Array of 3 strings. Write a casual comment. You MUST include the exact placeholder "[URL]" naturally inside the sentence (e.g., 'Found it right here [URL] and it looks great'). You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments. Write at least 2 distinct sentences.),
-"daily_thread": (String. Weave the price, title, retailer_name, all extracted facts, and the exact placeholder "[URL]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title. Write at least 3 distinct sentences.),
-"emoji_pool": (Array of 10 literal Unicode emoji characters highly specific to the product. Do NOT use commercial/money emojis.)
-GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Sold out, Miss out, Rare, Exclusive, Restock, Gone, Run, Grab it now, Like, Share, Tag, Comment, React, Vote, Link, URL, Website, Click, Tap, Bio, DM, Alert, Shocking, Mind-blowing, Secret, Hack, viral, Game changer, Stock, Inventory.`;
+"features_catchall": (String. Extract ANY remaining bullet points, features, or specs from the raw text. If none, write "NONE"),
+"post_variations": (Array of 3 strings. You are a polymorphic text engine. PRICE LOCK (ABSOLUTE): You MUST include the exact sale_price and reg_price in EVERY SINGLE paragraph. If you drop the price, the system will crash. You MUST weave the sale_price, reg_price, cleaned_title, retailer_name, AND all facts from b2, b5, b8, and features_catchall naturally into the text. Do NOT use rigid hyphens. QUANTITY RULE: If a quantity is required, explicitly say 'add [X] to your order'. Do NOT use 'cart'. S&S RULE: If S&S is required, frame it casually. BRAND BAN: You are STRICTLY FORBIDDEN from using the words 'coupon boutique' or naming the website. ROBOTIC POINTER BAN (NUCLEAR): You are STRICTLY FORBIDDEN from using the words 'URL', 'destination', 'website', 'page', 'visitors', or 'coupon boutique'. SYNTACTIC ENTROPY MANDATE (ABSOLUTE): You are STRICTLY FORBIDDEN from using the formula '[Title] is currently available on [Retailer] for [Price]' across your posts. You MUST use 3 completely different opening styles: Variation 1 MUST open with the price/discovery hook (e.g., 'Spotted a massive drop on...'). Variation 2 MUST open with a lifestyle scenario/problem (e.g., 'If your house needs...'). Variation 3 MUST open with a personal/collective recommendation (e.g., 'We've been keeping tabs on...'). POINTER SUPPRESSION: At least TWO of the variations MUST end naturally on a lifestyle sentence without any pointer at all! PRONOUNS: ${pronounInstruction} SLANG RULE: Use casual text-speak (ngl, tbh, lowkey, rn) in EXACTLY TWO of the strings. The remaining ONE string MUST be clean with zero slang. NUCLEAR BAN: 'game changer'. BANNED WORDS: Sale, Discount, Price, Cost, Checkout, Buy, URL. DELIMITER LOCK: You MUST separate every single sentence with the exact characters " || ". Example: "First sentence here. || Second sentence here. || Third sentence here."),
+"comments": (Array of 3 strings. Write a casual comment. TITLE BAN (ABSOLUTE): You are STRICTLY FORBIDDEN from repeating the product title in the comments. Use generic words like 'this one', 'it', or a broad category noun. ENGAGEMENT BAIT BAN (NUCLEAR): You are STRICTLY FORBIDDEN from using phrases like 'let me know', 'tell me below', 'thoughts?', 'comment below', or 'what do you think'. Ask the question as a natural standalone sentence. NUCLEAR BAN: You are STRICTLY FORBIDDEN from using the word 'share'. You MUST include the exact placeholder "[TARGET_SLOT]" naturally inside the sentence. You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments. QUESTION FIREWALL: Do NOT ask about colors, sizes, or options unless they are explicitly mentioned in the raw text. Write at least 2 distinct sentences. DELIMITER LOCK: You MUST separate every single sentence with the exact characters " || ".),
+"daily_thread": (String. Weave the price, title, retailer_name, all extracted facts (including features_catchall), and the exact placeholder "[TARGET_SLOT]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title. QUANTITY RULE: Explicitly state if they need to add a specific quantity to their order. S&S RULE: If S&S is required, frame it casually. NUCLEAR BAN: You are STRICTLY FORBIDDEN from using the word 'share'. DELIMITER LOCK: You MUST separate every single sentence with the exact characters " || ".),
+"emoji_pool": (Array of 10 literal Unicode emoji characters highly specific to the product. Do NOT use commercial/money emojis.),
+${customLineInstruction}
+GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words OR ANY OF THEIR VARIATIONS (e.g., stocking, restocked, markdowns, pricing, sales): Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Sold out, Miss out, Rare, Exclusive, Restock, Gone, Run, Grab, Grab it now, Like, Share, Tag, Comment, React, Vote, Link, URL, Website, Click, Tap, Bio, DM, Alert, Shocking, Mind-blowing, Secret, Hack, viral, Game changer, Stock, Inventory, elevate, transform, seamless, oasis, upgrade, must-have, essential, perfect addition.`;
         } else {
             // RUN DEAL PROMPT
             prompt = `Analyze this deal: "${rawText}"
@@ -615,24 +690,24 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
 "reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". If none, write "NONE"),
 "cleaned_title": (String. Copy the primary product name exactly. Remove emojis.),
 "scrubbed_keyword": (String. Extract a generic noun for the product. Max 2 words.),
-"post_variations": (Array of 3 strings. You are a polymorphic text engine. PRICE LOCK (ABSOLUTE): You MUST include the exact sale_price in EVERY SINGLE string. Write a short, urgent, 2-sentence Run Deal post. Sentence 1 MUST be a curiosity hook (e.g., 'Did they type this wrong?!'). Sentence 2 MUST weave the sale_price, scrubbed_keyword, and a physical action verb (e.g., 'Grab this microwave for $15.99 to heat up dinner!'). Do NOT use pronouns like I, My, We. NUCLEAR BAN: You are STRICTLY FORBIDDEN from using the phrase 'game changer'. BANNED WORDS: Sale, Discount, Price, Cost, Checkout, Buy.),
-"comments": (Array of 3 strings. Write a casual comment. NUCLEAR BAN: You are STRICTLY FORBIDDEN from using the word 'share'. If you use the word 'share', the system will crash. You MUST include the exact placeholder "[URL]" naturally inside the sentence (e.g., 'Found it right here [URL] and it looks great'). You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments. Write at least 2 distinct sentences.),
-"daily_thread": (String. Weave the price, title, retailer_name, and the exact placeholder "[URL]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title. Write at least 3 distinct sentences.),
-"emoji_pool": (Array of 10 literal Unicode emoji characters highly specific to the product. Do NOT use commercial/money emojis.)
-GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Sold out, Miss out, Rare, Exclusive, Restock, Gone, Run, Grab it now, Like, Share, Tag, Comment, React, Vote, Link, URL, Website, Click, Tap, Bio, DM, Alert, Shocking, Mind-blowing, Secret, Hack, viral, Game changer, Stock, Inventory.`;
+"features_catchall": (String. Extract ANY remaining bullet points, features, or specs from the raw text. If none, write "NONE"),
+"post_variations": (Array of 3 strings. You are a polymorphic text engine. PRICE BAN: You are STRICTLY FORBIDDEN from putting the price in this string. Write a short, urgent 2-sentence Run Deal post. Sentence 1: A curiosity hook (e.g., 'Did they type this wrong?!'). Sentence 2: VERB WHITELIST: You MUST start sentence 2 with one of these verbs: 'Snag', 'Pick up', 'Score', or 'Secure'. You are STRICTLY FORBIDDEN from using 'Grab'. Combine the verb + the scrubbed_keyword + the quantity rule + a casual value phrase. ROBOTIC POINTER BAN (NUCLEAR): You are STRICTLY FORBIDDEN from using the words 'URL', 'destination', 'website', 'page', 'visitors', or 'coupon boutique'. QUANTITY RULE: Say 'add [X] to your order'. ANTI-PARROT LOCK: Rotate different value phrases (e.g., 'for way less', 'on a serious budget', 'without breaking the bank'). Do NOT use pronouns like I, My, We. NUCLEAR BAN: 'game changer'. BANNED WORDS: Sale, Discount, Price, Cost, Checkout, Buy, Grab, Act fast, Hurry, URL. CHARACTER LIMIT: Under 120 characters. DELIMITER LOCK: Separate sentences with ' || ' and use proper punctuation. Example: "First sentence here. || Second sentence here."),
+"comments": (Array of 3 strings. Write a casual comment. DATA LOCK: You MUST include the exact sale_price AND the cleaned_title in EVERY comment so the buyer knows what the deal is. NUCLEAR BAN: You are STRICTLY FORBIDDEN from using the word 'share'. You MUST include the exact placeholder "[TARGET_SLOT]" naturally inside the sentence. You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments. QUESTION FIREWALL: Do NOT ask about colors, sizes, or options unless they are explicitly mentioned in the raw text. Write at least 2 distinct sentences. DELIMITER LOCK: You MUST separate every single sentence with the exact characters " || ".),
+"daily_thread": (String. Weave the sale_price, reg_price, cleaned_title, retailer_name, features_catchall, and the exact placeholder "[TARGET_SLOT]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title. QUANTITY RULE: If required, say 'add [X] to your order'. NEVER say 'holding area' or 'cart'. Write at least 3 distinct sentences. NUCLEAR BAN: You are STRICTLY FORBIDDEN from using the word 'share'. DELIMITER LOCK: You MUST separate every single sentence with the exact characters " || ".),
+"emoji_pool": (Array of 10 literal Unicode emoji characters highly specific to the product. Do NOT use commercial/money emojis.),
+${customLineInstruction}
+GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words OR ANY OF THEIR VARIATIONS (e.g., stocking, restocked, markdowns, pricing, sales): Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Sold out, Miss out, Rare, Exclusive, Restock, Gone, Run, Grab, Grab it now, Like, Share, Tag, Comment, React, Vote, Link, URL, Website, Click, Tap, Bio, DM, Alert, Shocking, Mind-blowing, Secret, Hack, viral, Game changer, Stock, Inventory, elevate, transform, seamless, oasis, upgrade, must-have, essential, perfect addition.`;
         }
 
         try {
             const selectedModel = document.getElementById('aiModel').value;
-            
-            // V10.0.7 MODEL SAFETY LOCK: Prevents sending junk model names to Google
             if (selectedModel.includes("⚠️") || selectedModel.includes("⏳")) {
                 throw new Error("Invalid AI Model. Please click the '🔄 Refresh' button next to the AI Model dropdown to load the models.");
             }
 
             const data = await fetchWithRetry(prompt, selectedModel);
             let aiText = data.candidates[0].content.parts[0].text;
-                        
+            
             aiText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
             const startIndex = aiText.indexOf('{');
             const endIndex = aiText.lastIndexOf('}');
@@ -657,19 +732,27 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
 
             currentRawOutput += `=== PHASE 0: TARGET LOCK ===\n[DEAL: ${document.getElementById('dealNumber').value} | POSTER: ${posterName}]\n${rawText}\n\n`;
 
+            const extractedURL = extractURL(rawText);
+
             for(let i=0; i<3; i++) {
-                // Split by punctuation to force line breaks
-                let postLines = aiData.post_variations[i].split(/(?<=[.!?])\s+/).filter(line => line.trim().length > 0); 
+                let postLines = aiData.post_variations[i].split('||').map(s => s.trim()).filter(line => line.length > 0); 
+                
+                let customText = (aiData.custom_line_rephrases && aiData.custom_line_rephrases[i] !== "DEAD") ? aiData.custom_line_rephrases[i] : "";
+                if (customText) {
+                    const randIdx = Math.floor(Math.random() * (postLines.length + 1));
+                    postLines.splice(randIdx, 0, customText);
+                }
+
                 let emojifiedPost = postLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
-                let finalPost = joinWithSpaceChaos(emojifiedPost, 1, 2);
+                let finalPost = dealType === 'run' ? emojifiedPost.join(' ') : joinWithSpaceChaos(emojifiedPost, 1, 2);
                 
                 document.getElementById(`out-post${i+1}`).innerText = finalPost;
                 document.getElementById(`out-post${i+1}`).setAttribute('data-raw', finalPost);
                 currentRawOutput += `=== POST VARIATION ${i+1} ===\n${finalPost}\n\n`;
                 
                 let cloaked = cloakURL(extractedURL);
-                let commentText = aiData.comments[i].replace('[URL]', cloaked);
-                let commentLines = commentText.split(/(?<=[.!?])\s+/).filter(line => line.trim().length > 0);
+                let commentText = aiData.comments[i].replace('[TARGET_SLOT]', cloaked).replace('[URL]', cloaked);
+                let commentLines = commentText.split('||').map(s => s.trim()).filter(line => line.length > 0);
                 let emojifiedComment = commentLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
                 let finalComment = joinWithSpaceChaos(emojifiedComment, 1, 2);
 
@@ -679,8 +762,15 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             }
 
             let dtCloaked = cloakURL(extractedURL);
-            let dtText = aiData.daily_thread.replace('[URL]', dtCloaked);
-            let dtLines = dtText.split(/(?<=[.!?])\s+/).filter(line => line.trim().length > 0);
+            let dtText = aiData.daily_thread.replace('[TARGET_SLOT]', dtCloaked).replace('[URL]', dtCloaked);
+            let dtLines = dtText.split('||').map(s => s.trim()).filter(line => line.length > 0);
+            
+            let customTextDt = (aiData.custom_line_rephrases && aiData.custom_line_rephrases[3] !== "DEAD") ? aiData.custom_line_rephrases[3] : "";
+            if (customTextDt) {
+                const randIdxDt = Math.floor(Math.random() * (dtLines.length + 1));
+                dtLines.splice(randIdxDt, 0, customTextDt);
+            }
+
             let emojifiedDt = dtLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
             let finalDt = joinWithSpaceChaos(emojifiedDt, 1, 2);
 
@@ -695,12 +785,10 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const fullTimestampET = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
                 
-                // V10.0.8: Instantly update local and cloud memory arrays
                 sessionHistory.push({ url: extractedURL, title: aiData.cleaned_title });
                 globalDealHistory.push([fullTimestampET, posterName, aiData.cleaned_title, extractedURL]);
                 
                 const historyLog = document.getElementById('historyLog');
-                
                 if(document.getElementById('emptyHistory')) document.getElementById('emptyHistory').remove();
                 const historyCard = `
                     <div class="history-card">
@@ -723,6 +811,10 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 updateRoutingBanner();
             }
 
+            document.getElementById('rawText').value = '';
+            document.getElementById('customLine').value = '';
+            document.getElementById('duplicateWarning').style.display = 'none';
+
         } catch (error) {
             alert("Engine Error: " + error.message);
             document.getElementById('v7FallbackBtn').style.display = "flex";
@@ -732,9 +824,54 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
         }
     }
 
+    function copyToClipboard(elementId, btnElement) {
+        const el = document.getElementById(elementId);
+        const textToCopy = el.getAttribute('data-raw') || el.innerText;
+        if (!textToCopy) { alert("Nothing to copy yet!"); return; }
+
+        const handleSuccess = () => {
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "✅ Copied!";
+            btnElement.style.background = "#e6f4ea";
+            btnElement.style.color = "#00a400";
+            btnElement.style.borderColor = "#00a400";
+            setTimeout(() => { 
+                btnElement.innerText = originalText; 
+                btnElement.style.background = "#f8f9fa"; 
+                btnElement.style.color = "var(--text-muted)";
+                btnElement.style.borderColor = "var(--border)";
+            }, 2000);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textToCopy).then(handleSuccess).catch(() => fallbackCopy(textToCopy, handleSuccess));
+        } else {
+            fallbackCopy(textToCopy, handleSuccess);
+        }
+    }
+
+    function fallbackCopy(text, callback) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            if (callback) callback();
+        } catch (err) {
+            alert("Failed to copy. Please select the text manually.");
+        }
+        document.body.removeChild(textArea);
+    }
+
     function copyRawOutput(btnElement) {
-        if(!currentRawOutput) { alert("No output generated yet!"); return; }
-        navigator.clipboard.writeText(currentRawOutput).then(() => {
+        if (!currentRawOutput) { alert("No output generated yet!"); return; }
+
+        const handleSuccess = () => {
             const originalText = btnElement.innerText;
             btnElement.innerText = "✅ Copied Raw Output!";
             btnElement.style.background = "#e6f4ea";
@@ -746,6 +883,51 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 btnElement.style.color = "var(--text-main)";
                 btnElement.style.borderColor = "var(--border)";
             }, 2000);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(currentRawOutput).then(handleSuccess).catch(() => fallbackCopy(currentRawOutput, handleSuccess));
+        } else {
+            fallbackCopy(currentRawOutput, handleSuccess);
+        }
+    }
+
+    function reportIssue(btnElement) {
+        if(!currentRawOutput) { alert("No output generated yet to report!"); return; }
+        const posterName = document.getElementById('posterName').value;
+        const note = prompt("Optional: Type a quick note, or just click OK to submit the raw output:");
+        if (note === null) return; 
+        
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "⏳ Submitting...";
+        btnElement.disabled = true;
+
+        fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'issue',
+                poster: posterName,
+                note: note.trim() || "Raw Output Only",
+                rawPayload: "'" + currentRawOutput
+            })
+        }).then(() => {
+            btnElement.innerText = "✅ Issue Logged!";
+            btnElement.style.background = "#e6f4ea";
+            btnElement.style.color = "#00a400";
+            btnElement.style.borderColor = "#00a400";
+            setTimeout(() => {
+                btnElement.innerText = originalText;
+                btnElement.style.background = "#fff";
+                btnElement.style.color = "var(--danger)";
+                btnElement.style.borderColor = "var(--danger)";
+                btnElement.disabled = false;
+            }, 2500);
+        }).catch(err => {
+            alert("Failed to submit report: " + err);
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
         });
     }
 
