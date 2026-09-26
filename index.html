@@ -130,7 +130,7 @@
             <div class="card-header">
                 <h3 style="color: var(--primary);">🔵 RAW INPUT WORKSPACE</h3>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn-outline btn-danger" onclick="generateV7Fallback()">🚨 V7 Fallback</button>
+                    <button id="v7FallbackBtn" class="btn-outline btn-danger" style="display:none;" onclick="generateV7Fallback()">🚨 V7 Fallback</button>
                     <button class="btn-outline" onclick="clearWorkspace()">🗑️ Clear</button>
                 </div>
             </div>
@@ -375,7 +375,8 @@
         document.getElementById('duplicateWarning').style.display = 'none';
         document.getElementById('priceWarning').style.display = 'none';
         document.getElementById('outputSection').style.display = 'none';
-        fetchCloudHistory(); // Refresh cloud data when clearing
+        document.getElementById('v7FallbackBtn').style.display = 'none'; // V10.0.1: Hide emergency button on clear
+        fetchCloudHistory(); 
     }
 
     // V10 URL CLOAKER (Multi-Vector Sharding)
@@ -590,8 +591,10 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
                 updateRoutingBanner();
             }
 
-        } catch (error) {
+       } catch (error) {
             alert("Engine Error: " + error.message);
+            // V10.0.1: Unhide the V7 Fallback button ONLY on hard failure
+            document.getElementById('v7FallbackBtn').style.display = "flex";
         } finally {
             btn.innerHTML = "✨ Generate Deal";
             btn.disabled = false;
