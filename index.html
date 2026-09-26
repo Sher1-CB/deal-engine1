@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Command Center v10.0.7</title>
+    <title>The CB Command Center v10.0.8</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -110,7 +110,7 @@
             <p>Polymorphic Engine & Shift Manager</p>
         </div>
     </div>
-    <span class="version-tag">v10.0.7</span>
+    <span class="version-tag">v10.0.8</span>
 </div>
 
 <!-- V10 SEQUENCE & ROUTING BANNER -->
@@ -536,14 +536,33 @@
             localStorage.setItem(`cb_${id}`, document.getElementById(id).value.trim());
         });
 
+        // V10.0.8 DUAL-LAYER DUPLICATE GUARD (Session + Cloud Same-Day ET)
         const extractedURL = extractURL(rawText);
-        const duplicateRecord = globalDealHistory.find(row => row[3] === extractedURL);
+        const dupWarning = document.getElementById('duplicateWarning');
         
-        if (duplicateRecord) {
-            document.getElementById('duplicateWarning').innerHTML = `<span>⚠️</span> <strong>URL Collision:</strong> This link was already posted by <strong>${duplicateRecord[1]}</strong> on ${duplicateRecord[0]}!`;
-            document.getElementById('duplicateWarning').style.display = 'flex';
+        // 1. Check Local Session (Did I just generate this?)
+        const sessionDuplicate = sessionHistory.find(deal => deal.url === extractedURL);
+        
+        // 2. Check Cloud (Did someone post this TODAY in Eastern Time?)
+        const todayET = new Date().toLocaleDateString("en-US", {timeZone: "America/New_York"});
+        const cloudDuplicate = globalDealHistory.find(row => {
+            if (row[3] !== extractedURL) return false;
+            try {
+                const rowDate = new Date(row[0]).toLocaleDateString("en-US", {timeZone: "America/New_York"});
+                return rowDate === todayET;
+            } catch(e) { return false; }
+        });
+
+        if (sessionDuplicate) {
+            dupWarning.innerHTML = `<span>🚨</span> <strong>SESSION COLLISION:</strong> You already generated this exact link in this current session!`;
+            dupWarning.className = "alert-banner alert-danger";
+            dupWarning.style.display = 'flex';
+        } else if (cloudDuplicate) {
+            dupWarning.innerHTML = `<span>⚠️</span> <strong>CLOUD COLLISION:</strong> This was already posted TODAY by <strong>${cloudDuplicate[1]}</strong>!`;
+            dupWarning.className = "alert-banner alert-warning";
+            dupWarning.style.display = 'flex';
         } else {
-            document.getElementById('duplicateWarning').style.display = 'none';
+            dupWarning.style.display = 'none';
         }
 
         btn.innerHTML = "⏳ Compiling Polymorphic Engine...";
@@ -674,8 +693,14 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             if (!isTestMode) {
                 dealCount++;
                 const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const fullTimestampET = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+                
+                // V10.0.8: Instantly update local and cloud memory arrays
+                sessionHistory.push({ url: extractedURL, title: aiData.cleaned_title });
+                globalDealHistory.push([fullTimestampET, posterName, aiData.cleaned_title, extractedURL]);
                 
                 const historyLog = document.getElementById('historyLog');
+                
                 if(document.getElementById('emptyHistory')) document.getElementById('emptyHistory').remove();
                 const historyCard = `
                     <div class="history-card">
