@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CB Command Center v10.0.2</title>
+    <title>The CB Command Center v10.0.3</title>
     <style>
         :root {
             --primary: #1a73e8; 
@@ -30,9 +30,11 @@
         .version-tag { font-size: 12px; background: #1c1e21; color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; letter-spacing: 1px;}
 
         /* ROUTING BANNER */
-        .routing-banner { max-width: 1200px; margin: 0 auto 15px auto; padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;}
+        .routing-banner { max-width: 1200px; margin: 0 auto 15px auto; padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 15px; color: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.3s;}
         .route-acct1 { background: linear-gradient(135deg, var(--acct1), #0b51c5); }
         .route-acct2 { background: linear-gradient(135deg, var(--acct2), #007a00); }
+        .shuffle-route-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s;}
+        .shuffle-route-btn:hover { background: rgba(255,255,255,0.4); }
 
         .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; max-width: 1200px; margin: auto; }
         @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
@@ -55,16 +57,19 @@
         .btn-danger { background: #fff; color: var(--danger); border: 1px solid var(--danger); }
         .btn-danger:hover { background: var(--danger); color: #fff; }
 
+        .toggle-group { display: flex; gap: 5px; width: 100%; }
+        .toggle-btn { flex: 1; background: #f1f3f4; color: var(--text-muted); border: 1px solid var(--border); padding: 8px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .toggle-btn:hover { background: #e8eaed; }
+        .toggle-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 4px rgba(26,115,232,0.2); }
+
         .row { display: flex; gap: 10px; flex-wrap: wrap; }
         .col { flex: 1; min-width: 150px; }
         
-        /* API KEY RING */
         .api-ring { background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 15px; }
         .api-ring-header { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between;}
         .api-inputs { display: flex; gap: 10px; }
         .api-inputs input { padding: 6px 10px; font-size: 12px; }
 
-        /* WARNING BANNERS */
         .alert-banner { display: none; padding: 10px 15px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 15px; align-items: center; gap: 8px; }
         .alert-warning { background: #fff8e1; border: 1px solid #fbbc04; color: #b06000; }
         .alert-danger { background: #fce8e6; border: 1px solid #ea4335; color: #c5221f; }
@@ -105,12 +110,13 @@
             <p>Polymorphic Engine & Shift Manager</p>
         </div>
     </div>
-    <span class="version-tag">v10.0.2</span>
+    <span class="version-tag">v10.0.3</span>
 </div>
 
 <!-- V10 SEQUENCE & ROUTING BANNER -->
 <div id="routingBanner" class="routing-banner route-acct1">
-    <span>🔄</span> <span id="routingText">DEAL 1: [ACCOUNT 1] ➔ Start with DAILY THREAD ➔ Then Groups 1, 2, 3</span>
+    <div><span>🔄</span> <span id="routingText">DEAL 1: [ACCOUNT 1] ➔ Start with DAILY THREAD ➔ Then Groups 1, 2, 3</span></div>
+    <button class="shuffle-route-btn" onclick="randomizeRoute()">🔀 Shuffle Route</button>
 </div>
 
 <div class="main-grid">
@@ -149,6 +155,27 @@
             <label>Raw Deal Context Text</label>
             <textarea id="rawText" placeholder="Paste raw deal information here..."></textarea>
             
+            <!-- V10.0.3 RESTORED: Deal Type & Fulfillment -->
+            <div class="row" style="margin-top: 15px;">
+                <div class="col">
+                    <label>🚨 Deal Type</label>
+                    <div class="toggle-group">
+                        <button type="button" id="btn-regular" class="toggle-btn active" onclick="setDealType('regular')">Regular Deal</button>
+                        <button type="button" id="btn-run" class="toggle-btn" onclick="setDealType('run')">Run Deal</button>
+                    </div>
+                    <input type="hidden" id="dealType" value="regular">
+                </div>
+                <div class="col">
+                    <label>🚚 Fulfillment Style</label>
+                    <select id="fulfillmentStyle">
+                        <option value="auto" selected>Auto-Detect (Default)</option>
+                        <option value="shipped">Force: Shipped!</option>
+                        <option value="pickup">Force: Pickup / In-Store!</option>
+                        <option value="conditional">Force: Total! (Thresholds)</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="row" style="margin-top: 15px;">
                 <div class="col">
                     <label>👤 Active Poster</label>
@@ -314,6 +341,17 @@
         fetchLiveModels(); 
     });
 
+    function setDealType(type) {
+        document.getElementById('dealType').value = type;
+        if(type === 'regular') {
+            document.getElementById('btn-regular').classList.add('active');
+            document.getElementById('btn-run').classList.remove('active');
+        } else {
+            document.getElementById('btn-run').classList.add('active');
+            document.getElementById('btn-regular').classList.remove('active');
+        }
+    }
+
     async function fetchLiveModels() {
         const key = document.getElementById('key1').value.trim() || document.getElementById('key2').value.trim();
         const select = document.getElementById('aiModel');
@@ -366,6 +404,14 @@
         
         banner.className = `routing-banner ${pattern.color}`;
         text.innerHTML = `DEAL ${num}: [${pattern.acct}] ➔ ${pattern.text}`;
+    }
+
+    function randomizeRoute() {
+        const pattern = routingPatterns[Math.floor(Math.random() * routingPatterns.length)];
+        const banner = document.getElementById('routingBanner');
+        const text = document.getElementById('routingText');
+        banner.className = `routing-banner ${pattern.color}`;
+        text.innerHTML = `🔀 RANDOM: [${pattern.acct}] ➔ ${pattern.text}`;
     }
 
     function clearWorkspace() {
@@ -479,6 +525,8 @@
         const rawText = document.getElementById('rawText').value.trim();
         const posterName = document.getElementById('posterName').value;
         const pronounStyle = document.getElementById('pronounStyle').value;
+        const dealType = document.getElementById('dealType').value;
+        const fulfillmentChoice = document.getElementById('fulfillmentStyle').value;
         const isTestMode = document.getElementById('testMode').checked;
         const btn = document.getElementById('apiButton');
 
@@ -507,10 +555,23 @@
             ? "Use 1st Person pronouns (I, My, We, Our)." 
             : "Use 3rd Person pronouns (This, That, It). NEVER use I, My, We, or Our.";
 
-        const prompt = `Analyze this deal: "${rawText}"
+        // V10.0.3 FULFILLMENT LOGIC
+        let rLower = rawText.toLowerCase();
+        let activeStyle = fulfillmentChoice;
+        if (activeStyle === 'auto') {
+            if (rLower.includes('pickup') || rLower.includes('walgreens') || rLower.includes('cvs')) activeStyle = 'pickup';
+            else if (rLower.includes('$35') || rLower.includes('w+') || rLower.includes('walmart+') || rLower.includes('target circle') || rLower.includes('s&s')) activeStyle = 'conditional';
+            else activeStyle = 'shipped';
+        }
+        let fulfillmentStatus = activeStyle === 'pickup' ? "Pickup!" : activeStyle === 'conditional' ? "Total!" : "Shipped!";
+
+        let prompt = "";
+
+        if (dealType === 'regular') {
+            prompt = `Analyze this deal: "${rawText}"
 Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double quotes.
 "retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart". Fix leetspeak.),
-"sale_price": (String. Extract the sale price. Extract ONLY numbers and $ signs. If none, write "???"),
+"sale_price": (String. Extract the sale price. Extract ONLY numbers and $ signs, then ADD the word '${fulfillmentStatus}'. Example: '$5.99 ${fulfillmentStatus}'. If none, write "???"),
 "reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". If none, write "NONE"),
 "cleaned_title": (String. Copy the primary product name exactly. Remove emojis.),
 "b2_verification": (JSON Object. Extract facts from the extra text. If none, write "NONE".
@@ -521,11 +582,26 @@ Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double
 ),
 "b5_verification": (String. Extract retailer-specific shipping/pickup rules like 'Walmart+ or $35 order', 'Walgreens Pickup'. Ignore basic 'Free Shipping'. If none, write "NONE"),
 "b8_verification": (String. Extract S&S, Subscribe & Save, or Promo Codes. If none, write "NONE"),
-"post_variations": (Array of 3 strings. You are a polymorphic text engine. You MUST take the sale_price, reg_price, cleaned_title, retailer_name, AND EVERY SINGLE FACT extracted in b2, b5, and b8, and weave them naturally into a fluid, casual paragraph. Do NOT use rigid hyphens or bullet points. PRONOUNS: ${pronounInstruction} SLANG RULE: Use casual text-speak (ngl, tbh, lowkey, rn) in EXACTLY TWO of the strings. The remaining ONE string MUST be clean with zero slang. Make each of the 3 paragraphs structurally different.),
-"comments": (Array of 3 strings. Write a casual comment. You MUST include the exact placeholder "[URL]" naturally inside the sentence (e.g., 'Found it right here [URL] and it looks great'). You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments.),
-"daily_thread": (String. Weave the price, title, retailer_name, all extracted facts, and the exact placeholder "[URL]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title.),
+"post_variations": (Array of 3 strings. You are a polymorphic text engine. You MUST take the sale_price, reg_price, cleaned_title, retailer_name, AND EVERY SINGLE FACT extracted in b2, b5, and b8, and weave them naturally into a fluid, casual paragraph. Do NOT use rigid hyphens or bullet points. PRONOUNS: ${pronounInstruction} SLANG RULE: Use casual text-speak (ngl, tbh, lowkey, rn) in EXACTLY TWO of the strings. The remaining ONE string MUST be clean with zero slang. BANNED WORDS: Sale, Discount, Price, Cost, Checkout, Buy. Make each of the 3 paragraphs structurally different. You MUST write at least 3 distinct sentences per paragraph so they can be separated by line breaks.),
+"comments": (Array of 3 strings. Write a casual comment. You MUST include the exact placeholder "[URL]" naturally inside the sentence (e.g., 'Found it right here [URL] and it looks great'). You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments. Write at least 2 distinct sentences.),
+"daily_thread": (String. Weave the price, title, retailer_name, all extracted facts, and the exact placeholder "[URL]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title. Write at least 3 distinct sentences.),
 "emoji_pool": (Array of 10 literal Unicode emoji characters highly specific to the product. Do NOT use commercial/money emojis.)
 GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Sold out, Miss out, Rare, Exclusive, Restock, Gone, Run, Grab it now, Like, Share, Tag, Comment, React, Vote, Link, URL, Website, Click, Tap, Bio, DM, Alert, Shocking, Mind-blowing, Secret, Hack, viral, Game changer, Stock, Inventory.`;
+        } else {
+            // RUN DEAL PROMPT
+            prompt = `Analyze this deal: "${rawText}"
+Return ONLY a valid JSON object. Do NOT use markdown. Escape all internal double quotes.
+"retailer_name": (String. Extract the FULL retailer name, e.g., "Amazon", "Walmart". Fix leetspeak.),
+"sale_price": (String. Extract the sale price. Extract ONLY numbers and $ signs, then ADD the word '${fulfillmentStatus}'. Example: '$5.99 ${fulfillmentStatus}'. If none, write "???"),
+"reg_price": (String. Extract regular price. Strip the $ sign and REPLACE the decimal with a space, e.g. "34 99". If none, write "NONE"),
+"cleaned_title": (String. Copy the primary product name exactly. Remove emojis.),
+"scrubbed_keyword": (String. Extract a generic noun for the product. Max 2 words.),
+"post_variations": (Array of 3 strings. You are a polymorphic text engine. Write a short, urgent, 2-sentence Run Deal post. Sentence 1 MUST be a curiosity hook (e.g., 'Did they type this wrong?!'). Sentence 2 MUST weave the scrubbed_keyword and a physical action verb (e.g., 'Grab this microwave to heat up dinner for way less!'). Do NOT use pronouns like I, My, We. BANNED WORDS: Sale, Discount, Price, Cost, Checkout, Buy.),
+"comments": (Array of 3 strings. Write a casual comment. You MUST include the exact placeholder "[URL]" naturally inside the sentence (e.g., 'Found it right here [URL] and it looks great'). You are STRICTLY FORBIDDEN from using the phrase 'Here is the link'. Ask a low-effort question in 2 of the comments. Write at least 2 distinct sentences.),
+"daily_thread": (String. Weave the price, title, retailer_name, and the exact placeholder "[URL]" into a single natural, conversational message. Do NOT use hyphens to separate the price and title. Write at least 3 distinct sentences.),
+"emoji_pool": (Array of 10 literal Unicode emoji characters highly specific to the product. Do NOT use commercial/money emojis.)
+GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any of these banned words: Buy, Order, Purchase, Shop, Checkout, Cart, Basket, Price, Cost, Spend, Payment, Fee, Charge, Sale, Deal, Deals, Save, Savings, Discount, Markdown, Clearance, Offer, Promo, %, Coupon, Voucher, Claim, Redeem, Code, Free, Hurry, Act fast, Today only, Ending soon, Limited time, Flash sale, Sold out, Miss out, Rare, Exclusive, Restock, Gone, Run, Grab it now, Like, Share, Tag, Comment, React, Vote, Link, URL, Website, Click, Tap, Bio, DM, Alert, Shocking, Mind-blowing, Secret, Hack, viral, Game changer, Stock, Inventory.`;
+        }
 
         try {
             const selectedModel = document.getElementById('aiModel').value;
@@ -546,7 +622,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             
             const aiData = JSON.parse(aiText);
 
-            const cleanAiPrice = aiData.sale_price.replace('$', '').trim();
+            const cleanAiPrice = aiData.sale_price.replace('$', '').replace(fulfillmentStatus, '').trim();
             if (cleanAiPrice !== "???" && !rawText.includes(cleanAiPrice)) {
                 document.getElementById('priceWarning').style.display = 'flex';
             }
@@ -557,7 +633,8 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
             currentRawOutput += `=== PHASE 0: TARGET LOCK ===\n[DEAL: ${document.getElementById('dealNumber').value} | POSTER: ${posterName}]\n${rawText}\n\n`;
 
             for(let i=0; i<3; i++) {
-                let postLines = aiData.post_variations[i].split(/(?<=[.!?])\s+/); 
+                // Split by punctuation to force line breaks
+                let postLines = aiData.post_variations[i].split(/(?<=[.!?])\s+/).filter(line => line.trim().length > 0); 
                 let emojifiedPost = postLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
                 let finalPost = joinWithSpaceChaos(emojifiedPost, 1, 2);
                 
@@ -567,7 +644,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
                 
                 let cloaked = cloakURL(extractedURL);
                 let commentText = aiData.comments[i].replace('[URL]', cloaked);
-                let commentLines = commentText.split(/(?<=[.!?])\s+/);
+                let commentLines = commentText.split(/(?<=[.!?])\s+/).filter(line => line.trim().length > 0);
                 let emojifiedComment = commentLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
                 let finalComment = joinWithSpaceChaos(emojifiedComment, 1, 2);
 
@@ -578,7 +655,7 @@ GLOBAL SHIELD (ABSOLUTE SUPREME LAW): You are STRICTLY FORBIDDEN from using any 
 
             let dtCloaked = cloakURL(extractedURL);
             let dtText = aiData.daily_thread.replace('[URL]', dtCloaked);
-            let dtLines = dtText.split(/(?<=[.!?])\s+/);
+            let dtLines = dtText.split(/(?<=[.!?])\s+/).filter(line => line.trim().length > 0);
             let emojifiedDt = dtLines.map(line => Math.random() > 0.5 ? `${line} ${getEmoji()}` : `${getEmoji()} ${line}`);
             let finalDt = joinWithSpaceChaos(emojifiedDt, 1, 2);
 
